@@ -149,6 +149,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           <p className="px-2 text-[10px] font-bold text-text-sub/40 uppercase tracking-widest mt-6 mb-2">Academic & Dev</p>
           <NavItem icon={GraduationCap} label="Tutor" active={currentView === 'student'} onClick={() => onViewChange('student')} />
+          <NavItem icon={ClipboardCheck} label="Exam Prep" active={currentView === 'exam'} onClick={() => onViewChange('exam')} />
           <NavItem icon={Code2} label="Code" active={currentView === 'code'} onClick={() => onViewChange('code')} />
           <NavItem icon={Hammer} label="App Builder" active={currentView === 'builder'} onClick={() => onViewChange('builder')} />
         </div>

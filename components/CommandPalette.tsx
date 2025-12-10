@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Command, ArrowRight, Zap, Settings, MessageSquare, BookOpen, PenTool, Hammer } from 'lucide-react';
+import { Search, Command, ArrowRight, Zap, Settings, MessageSquare, BookOpen, PenTool, Hammer, ClipboardCheck } from 'lucide-react';
 import { ViewMode } from '../types';
 import { ThemeName } from '../theme/types';
 
@@ -36,6 +36,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
     { id: 'new-chat', label: 'New Chat', icon: MessageSquare, shortcut: 'Ctrl+N', category: 'General', action: () => onAction('new-chat') },
     { id: 'theme-next', label: 'Switch Theme', icon: Zap, shortcut: 'Ctrl+Shift+T', category: 'Appearance', action: () => onAction('theme-next') },
     { id: 'mode-student', label: 'Student Mode', icon: BookOpen, category: 'Modes', action: () => onAction('switch-mode', 'student') },
+    { id: 'mode-exam', label: 'Exam Mode', icon: ClipboardCheck, category: 'Modes', action: () => onAction('switch-mode', 'exam') },
     { id: 'mode-code', label: 'Code Mode', icon: Zap, category: 'Modes', action: () => onAction('switch-mode', 'code') },
     { id: 'mode-live', label: 'Live Mode', icon: Zap, category: 'Modes', action: () => onAction('switch-mode', 'live') },
     { id: 'mode-image', label: 'Image Studio', icon: PenTool, category: 'Modes', action: () => onAction('switch-mode', 'workspace') },

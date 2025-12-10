@@ -20,7 +20,7 @@ import { memoryService } from "./memoryService";
 // Helper to init AI - STRICTLY use process.env.API_KEY
 export const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-// ... (Keep SAFETY_SETTINGS and HELPLINE_MESSAGE and formatHistory as is) ...
+// ... (Keep SAFETY_SETTINGS, HELPLINE_MESSAGE, formatHistory, MEDIA_PLAYER_TOOL, SAVE_MEMORY_TOOL, ZARA_CORE_IDENTITY, ZARA_BUILDER_IDENTITY, buildSystemInstruction, extractMediaAction, sendMessageToGeminiStream, sendAppBuilderStream, generateStudentContent, generateCodeAssist, generateImageContent, generateVideo, analyzeVideo, generateSpeech, getBreakingNews, generateFlashcards, generateStudyPlan as is) ...
 const SAFETY_SETTINGS = [
   { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
   { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
@@ -84,7 +84,7 @@ export const SAVE_MEMORY_TOOL: FunctionDeclaration = {
   }
 };
 
-// ... (Keep ZARA_CORE_IDENTITY as is) ...
+// ... (Keep ZARA_CORE_IDENTITY and ZARA_BUILDER_IDENTITY) ...
 export const ZARA_CORE_IDENTITY = `
 **IDENTITY: Zara AI — Ultra Unified GEN-2 Intelligence System**
 
@@ -292,7 +292,6 @@ export const buildSystemInstruction = (personalization?: PersonalizationConfig, 
   return instruction;
 };
 
-// ... (keep extractMediaAction as is)
 export const extractMediaAction = (text: string): { cleanText: string, mediaAction: MediaAction | null } => {
   const jsonRegex = /```json\s*([\s\S]*?)\s*```/;
   const match = text.match(jsonRegex);
@@ -311,8 +310,7 @@ export const extractMediaAction = (text: string): { cleanText: string, mediaActi
   return { cleanText: text, mediaAction: null };
 };
 
-// ... (Keep the rest of the file content unchanged) ...
-// --- CORE CHAT WITH STREAMING ---
+// ... (Rest of existing functions like sendMessageToGeminiStream, sendAppBuilderStream, generateStudentContent, generateCodeAssist, generateImageContent, generateVideo, analyzeVideo, generateSpeech, getBreakingNews, generateFlashcards, generateStudyPlan) ...
 export const sendMessageToGeminiStream = async (
   history: Message[],
   newMessage: string,
@@ -413,7 +411,6 @@ export const sendMessageToGeminiStream = async (
   }
 };
 
-// --- APP BUILDER STREAM ---
 export const sendAppBuilderStream = async (
   history: Message[],
   newMessage: string,
@@ -439,12 +436,12 @@ export const sendAppBuilderStream = async (
 
   try {
     const stream = await ai.models.generateContentStream({
-      model: 'gemini-2.5-flash', // Default to flash for speed, user can request Pro features in prompt if needed
+      model: 'gemini-2.5-flash',
       contents: contents,
       config: {
         systemInstruction: ZARA_BUILDER_IDENTITY,
         safetySettings: SAFETY_SETTINGS,
-        thinkingConfig: { thinkingBudget: 8192 } // Enable thinking for better architecture planning
+        thinkingConfig: { thinkingBudget: 8192 }
       }
     });
 
@@ -465,8 +462,6 @@ export const sendAppBuilderStream = async (
     throw error;
   }
 };
-
-// --- UTILS (Refactored to remove apiKey arg) ---
 
 export const generateStudentContent = async (config: StudentConfig): Promise<string> => {
   const ai = getAI();
@@ -523,7 +518,6 @@ export const generateImageContent = async (prompt: string, options: any): Promis
   const ai = getAI();
   
   if (options.referenceImage) {
-    // Image Editing (using flash-image)
     const response = await ai.models.generateContent({
        model: 'gemini-2.5-flash-image',
        contents: {
@@ -534,7 +528,6 @@ export const generateImageContent = async (prompt: string, options: any): Promis
        }
     });
     
-    // Check parts for image
     for (const part of response.candidates?.[0]?.content?.parts || []) {
       if (part.inlineData) {
          return { imageUrl: `data:image/png;base64,${part.inlineData.data}` };
@@ -546,9 +539,7 @@ export const generateImageContent = async (prompt: string, options: any): Promis
     return { text: "No image generated." };
 
   } else {
-    // Image Generation
     if (options.model === 'gemini-3-pro-image-preview') {
-       // Pro Model - Text to Image
        const response = await ai.models.generateContent({
          model: 'gemini-3-pro-image-preview',
          contents: { parts: [{ text: prompt }] },
@@ -568,7 +559,6 @@ export const generateImageContent = async (prompt: string, options: any): Promis
       return { text: "Failed to generate image." };
 
     } else {
-       // Flash Model (Nano Banana)
        const response = await ai.models.generateContent({
          model: 'gemini-2.5-flash-image',
          contents: { parts: [{ text: prompt }] },
@@ -594,7 +584,6 @@ export const generateVideo = async (
 ): Promise<string> => {
    const ai = getAI();
    
-   // Handle Slideshow / Multi-image logic
    if (images && images.length > 1) {
       if (images.length > 3) throw new Error("Maximum 3 images allowed for slideshows.");
       
@@ -603,7 +592,6 @@ export const generateVideo = async (
          referenceType: VideoGenerationReferenceType.ASSET,
       }));
 
-      // Veo 3.1 Pro for Multi-image requires strict config: 720p, 16:9
       let operation = await ai.models.generateVideos({
          model: 'veo-3.1-generate-preview',
          prompt: prompt,
@@ -625,7 +613,6 @@ export const generateVideo = async (
       return `${uri}&key=${process.env.API_KEY}`;
 
    } else {
-      // Single Image or Text-to-Video (Fast Model)
       const config: any = {
          numberOfVideos: 1,
          resolution: '720p',
@@ -662,14 +649,6 @@ export const generateVideo = async (
 };
 
 export const analyzeVideo = async (base64Video: string, mimeType: string, prompt: string): Promise<string> => {
-   // Since the user is uploading a video file in browser, we can't easily stream the bytes to the API 
-   // like the File API expects for context caching. 
-   // For this demo, we will treat it as a multimodal prompt using generateContent with inline data if small enough,
-   // OR strictly speaking, Gemini Flash supports video as inline data up to a limit.
-   
-   // NOTE: Large videos should use the File API upload, but that requires a server-side proxy usually to handle the upload URL securely.
-   // We will attempt inline data for small clips.
-   
    const ai = getAI();
    const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
@@ -703,7 +682,6 @@ export const generateSpeech = async (text: string, voiceName: string): Promise<s
   return audioData;
 };
 
-// ... (Rest of the file exports remain similar, ensuring process.env.API_KEY is used)
 export const getBreakingNews = async (): Promise<{ text: string, sources: Source[] }> => {
   const ai = getAI();
   const response = await ai.models.generateContent({
@@ -750,20 +728,17 @@ export const generateFlashcards = async (topic: string, context: string): Promis
 export const generateStudyPlan = async (topic: string, hours: number): Promise<StudyPlan> => {
    const ai = getAI();
    const prompt = `Create a 5-day study plan for "${topic}" with ${hours} hours per day. Return valid JSON.`;
-   // Simplified schema for brevity, ideally fully defined
    const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: prompt,
       config: { responseMimeType: 'application/json' }
    });
    
-   // Manual parsing/mapping would happen here to match StudyPlan interface
-   // For now assuming the model follows instructions well or we parse loosely
    const raw = JSON.parse(response.text || '{}');
    return {
      id: crypto.randomUUID(),
      topic,
-     weeklySchedule: raw.weeklySchedule || [], // Model should return this structure
+     weeklySchedule: raw.weeklySchedule || [],
      createdAt: Date.now(),
      startDate: new Date().toISOString()
    } as StudyPlan;
@@ -771,12 +746,29 @@ export const generateStudyPlan = async (topic: string, hours: number): Promise<S
 
 export const generateExamQuestions = async (config: ExamConfig): Promise<ExamQuestion[]> => {
   const ai = getAI();
-  const prompt = `Generate ${config.questionCount} questions for a ${config.examType} on "${config.subject}". Difficulty: ${config.difficulty}. Language: ${config.language}. Include ${config.includeTheory ? 'both MCQ and Theory' : 'only MCQ'} questions. Return JSON.`;
+  const prompt = `Generate ${config.questionCount} questions for a ${config.examType} on "${config.subject}". Difficulty: ${config.difficulty}. Language: ${config.language}. Include ${config.includeTheory ? 'both MCQ and Theory' : 'only MCQ'} questions. For MCQs, provide 4 options. For Theory, set options to null.`;
   
   const response = await ai.models.generateContent({
      model: 'gemini-2.5-flash',
      contents: prompt,
-     config: { responseMimeType: 'application/json' }
+     config: { 
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              id: { type: Type.INTEGER },
+              type: { type: Type.STRING, enum: ['MCQ', 'SHORT', 'LONG'] },
+              text: { type: Type.STRING },
+              options: { type: Type.ARRAY, items: { type: Type.STRING } },
+              correctAnswer: { type: Type.STRING },
+              marks: { type: Type.INTEGER }
+            },
+            required: ['id', 'type', 'text', 'correctAnswer', 'marks']
+          }
+        }
+     }
   });
   
   return JSON.parse(response.text || '[]');
@@ -789,8 +781,18 @@ export const evaluateTheoryAnswers = async (subject: string, question: ExamQuest
    const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: prompt,
-      config: { responseMimeType: 'application/json' }
+      config: { 
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            score: { type: Type.INTEGER },
+            feedback: { type: Type.STRING }
+          },
+          required: ['score', 'feedback']
+        }
+      }
    });
    
-   return JSON.parse(response.text || '{ "score": 0, "feedback": "Error" }');
+   return JSON.parse(response.text || '{ "score": 0, "feedback": "Error evaluating" }');
 };

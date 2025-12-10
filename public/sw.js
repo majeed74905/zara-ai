@@ -7,7 +7,6 @@ const PRECACHE_URLS = [
   './',
   './index.html',
   './manifest.json'
-  // Note: Bundled CSS/JS are cached via runtime caching below as their names are hashed by Vite
 ];
 
 // External domains to cache (CDNs for React, Tailwind, Fonts, Icons)

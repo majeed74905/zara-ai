@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { BookOpen, Clock, Settings, Brain, Layers } from 'lucide-react';
 import { ExamConfig, AppLanguage, ExamType, ExamDifficulty } from '../../types';
@@ -65,7 +66,7 @@ export const ExamSetup: React.FC<ExamSetupProps> = ({ config, setConfig, onStart
            {/* Type & Time */}
            <div>
               <label className="text-sm font-bold text-text mb-2 block flex items-center gap-2">
-                <Clock className="w-4 h-4 text-emerald-500" /> Exam Duration
+                <Clock className="w-4 h-4 text-emerald-500" /> Exam Mode
               </label>
               <div className="flex gap-2 p-1 bg-surfaceHighlight rounded-xl">
                  {(['Quiz', 'Unit Test', 'Semester'] as ExamType[]).map(type => (
@@ -84,9 +85,33 @@ export const ExamSetup: React.FC<ExamSetupProps> = ({ config, setConfig, onStart
                    </button>
                  ))}
               </div>
-              <p className="text-xs text-text-sub mt-2 ml-1">
-                 Duration: {config.durationMinutes} mins | Questions: {config.questionCount}
-              </p>
+              
+              {/* Custom Duration & Count Override */}
+              <div className="bg-surfaceHighlight/30 p-4 rounded-xl border border-dashed border-border mt-2">
+                 <div className="flex justify-between text-xs text-text-sub mb-2 font-bold uppercase">
+                    <span>Customize</span>
+                 </div>
+                 <div className="grid grid-cols-2 gap-4">
+                    <div>
+                       <label className="text-xs text-text-sub block mb-1">Duration (mins)</label>
+                       <input 
+                         type="number" 
+                         value={config.durationMinutes}
+                         onChange={(e) => updateConfig('durationMinutes', parseInt(e.target.value))}
+                         className="w-full bg-surface border border-border rounded-lg px-2 py-1 text-sm focus:border-emerald-500 outline-none"
+                       />
+                    </div>
+                    <div>
+                       <label className="text-xs text-text-sub block mb-1">Question Count</label>
+                       <input 
+                         type="number" 
+                         value={config.questionCount}
+                         onChange={(e) => updateConfig('questionCount', parseInt(e.target.value))}
+                         className="w-full bg-surface border border-border rounded-lg px-2 py-1 text-sm focus:border-emerald-500 outline-none"
+                       />
+                    </div>
+                 </div>
+              </div>
            </div>
 
            {/* Difficulty */}
