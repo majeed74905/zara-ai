@@ -1,0 +1,8 @@
+{
+  "name": "Zara AI – Unified Intelligent Multi-model Interacting System",
+  "description": "A feature-rich AI interface supporting text, images, and PDF uploads powered by Google Gemini.",
+  "requestFramePermissions": [
+    "microphone",
+    "geolocation"
+  ]
+}

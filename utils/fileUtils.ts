@@ -1,0 +1,56 @@
+import { Attachment } from '../types';
+
+export const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => {
+      const result = reader.result as string;
+      // Remove the Data URL prefix (e.g., "data:image/png;base64,")
+      const base64 = result.split(',')[1];
+      resolve(base64);
+    };
+    reader.onerror = (error) => reject(error);
+  });
+};
+
+export const createAttachment = async (file: File): Promise<Attachment> => {
+  const base64 = await fileToBase64(file);
+  return {
+    id: crypto.randomUUID(),
+    file,
+    base64,
+    mimeType: file.type,
+    previewUrl: URL.createObjectURL(file),
+  };
+};
+
+export const validateFile = (file: File): string | null => {
+  const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+  if (file.size > MAX_SIZE) {
+    return 'File size exceeds 10MB limit.';
+  }
+  
+  const allowedTypes = [
+    'image/png', 
+    'image/jpeg', 
+    'image/webp', 
+    'image/heic', 
+    'image/heif',
+    'application/pdf',
+    'text/plain',
+    'text/javascript',
+    'text/x-python',
+    'text/html',
+    'text/css',
+    'application/json',
+    'text/markdown'
+  ];
+
+  // Loose check for text files if mime type is missing or generic
+  if (file.type.startsWith('text/') || allowedTypes.includes(file.type)) {
+      return null;
+  }
+
+  return 'Unsupported file type. Please upload images, PDFs, or text files.';
+};
