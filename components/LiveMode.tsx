@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Radio, AlertTriangle, User, Sparkles, Zap, AudioLines, RefreshCw, Heart, Globe, Play, ExternalLink, Music, Youtube, X, WifiOff } from 'lucide-react';
+import { Mic, MicOff, Radio, AlertTriangle, User, Sparkles, Activity, WifiOff, X, Music, Youtube, RefreshCw, ExternalLink, Loader2 } from 'lucide-react';
+import { Modality } from "@google/genai";
 import { getAI, buildSystemInstruction, MEDIA_PLAYER_TOOL } from '../services/gemini';
 import { float32ToInt16, base64ToUint8Array, decodeAudioData, arrayBufferToBase64 } from '../utils/audioUtils';
-import { Modality, LiveServerMessage } from '@google/genai';
 import { PersonalizationConfig, MediaAction } from '../types';
 
 interface LiveModeProps {
@@ -18,19 +18,19 @@ interface LiveMessage {
 
 export const LiveMode: React.FC<LiveModeProps> = ({ personalization }) => {
   const [isActive, setIsActive] = useState(false);
-  const [status, setStatus] = useState('Ready to connect');
+  const [status, setStatus] = useState('Ready');
   const [volume, setVolume] = useState(0);
   const [messages, setMessages] = useState<LiveMessage[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [mediaCard, setMediaCard] = useState<MediaAction | null>(null);
   
   const [isAiSpeaking, setIsAiSpeaking] = useState(false);
-  const [displaySpeed, setDisplaySpeed] = useState(1.0);
-  const playbackSpeedRef = useRef(1.0);
   
+  // Refs for connection management
   const isActiveRef = useRef(false);
   const isMountedRef = useRef(true);
   const isConnectedRef = useRef(false);
+  const isUserStoppingRef = useRef(false); 
   
   const audioContextRef = useRef<AudioContext | null>(null);
   const inputAudioContextRef = useRef<AudioContext | null>(null);
@@ -44,13 +44,12 @@ export const LiveMode: React.FC<LiveModeProps> = ({ personalization }) => {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Offline detection logic for Live Mode
+  // Offline detection logic
   useEffect(() => {
     const handleOffline = () => {
       if (isActiveRef.current) {
-        cleanup();
-        setError("Connection lost. Offline.");
-        setStatus("Offline");
+        setError("Connection unstable. Attempting to hold...");
+        setStatus("Reconnecting...");
       }
     };
     window.addEventListener('offline', handleOffline);
@@ -66,18 +65,22 @@ export const LiveMode: React.FC<LiveModeProps> = ({ personalization }) => {
   }, [messages]);
 
   const cleanup = () => {
-    isActiveRef.current = false;
-    isConnectedRef.current = false;
-    
-    if (isMountedRef.current) {
-      setIsActive(false);
-      setIsAiSpeaking(false);
-      setVolume(0);
-      setMediaCard(null);
+    if (isUserStoppingRef.current) {
+        isActiveRef.current = false;
+        setIsActive(false);
+        setIsAiSpeaking(false);
+        setVolume(0);
+        setMediaCard(null);
+        setStatus('Ready');
     }
     
+    isConnectedRef.current = false;
+    
     if (sessionRef.current) {
-        try { sessionRef.current.close(); } catch(e) {}
+        try { 
+            // Attempt to close gracefully
+            sessionRef.current.close(); 
+        } catch(e) {}
         sessionRef.current = null;
     }
 
@@ -118,17 +121,10 @@ export const LiveMode: React.FC<LiveModeProps> = ({ personalization }) => {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
+      isUserStoppingRef.current = true;
       cleanup();
     };
   }, []);
-
-  const cycleSpeed = () => {
-    const speeds = [1.0, 1.25, 1.5, 2.0, 0.75];
-    const nextIndex = (speeds.indexOf(displaySpeed) + 1) % speeds.length;
-    const newSpeed = speeds[nextIndex];
-    setDisplaySpeed(newSpeed);
-    playbackSpeedRef.current = newSpeed;
-  };
 
   const downsampleBuffer = (buffer: Float32Array, inputRate: number, outputRate: number) => {
     if (outputRate === inputRate) return buffer;
@@ -151,23 +147,20 @@ export const LiveMode: React.FC<LiveModeProps> = ({ personalization }) => {
     const source = ctx.createBufferSource();
     source.buffer = buffer;
     
-    // OUTPUT VOLUME BOOST (200%)
+    // OUTPUT VOLUME BOOST
     const gainNode = ctx.createGain();
-    gainNode.gain.value = 2.0; 
+    gainNode.gain.value = 1.5; 
     
     source.connect(gainNode);
     gainNode.connect(ctx.destination);
     
-    const currentSpeed = playbackSpeedRef.current;
-    source.playbackRate.value = currentSpeed;
-
     const now = ctx.currentTime;
     if (nextStartTimeRef.current < now) {
         nextStartTimeRef.current = now + 0.05;
     }
 
     source.start(nextStartTimeRef.current);
-    nextStartTimeRef.current += buffer.duration / currentSpeed;
+    nextStartTimeRef.current += buffer.duration;
     
     if (isMountedRef.current) setIsAiSpeaking(true);
     audioQueueRef.current.push(source);
@@ -191,27 +184,39 @@ export const LiveMode: React.FC<LiveModeProps> = ({ personalization }) => {
         setError("No internet connection.");
         return;
     }
+
+    // Check API Key
+    if (!process.env.API_KEY) {
+        setError("API Key missing. Cannot connect.");
+        return;
+    }
     
     setError(null);
-    setMessages([]); 
     setIsActive(true); 
-    setMediaCard(null);
     isActiveRef.current = true;
-    setStatus('Initializing Audio...');
+    if (isUserStoppingRef.current) setMessages([]);
+    
+    isUserStoppingRef.current = false;
+    setStatus('Initializing...');
 
     try {
-      // 1. Enforce 16kHz for better input quality matching model requirements
-      let inputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
+      // 1. Setup Audio Contexts
+      let inputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ 
+          sampleRate: 16000,
+          latencyHint: 'interactive'
+      });
       if (inputCtx.state === 'suspended') await inputCtx.resume();
       inputAudioContextRef.current = inputCtx;
 
-      // Output context
-      const outputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+      const outputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ 
+          sampleRate: 24000,
+          latencyHint: 'interactive'
+      });
       if (outputCtx.state === 'suspended') await outputCtx.resume();
       audioContextRef.current = outputCtx;
       nextStartTimeRef.current = outputCtx.currentTime;
 
-      setStatus('Requesting Microphone...');
+      // 2. Get Media Stream
       let stream: MediaStream;
       try {
         stream = await navigator.mediaDevices.getUserMedia({
@@ -219,9 +224,9 @@ export const LiveMode: React.FC<LiveModeProps> = ({ personalization }) => {
             echoCancellation: true,
             noiseSuppression: true,
             autoGainControl: true,
-            sampleRate: 16000, // Hint to browser
+            sampleRate: 16000,
             channelCount: 1
-          }
+          } as any
         });
       } catch (err) {
         console.warn("Advanced audio constraints failed, falling back", err);
@@ -229,21 +234,25 @@ export const LiveMode: React.FC<LiveModeProps> = ({ personalization }) => {
       }
       mediaStreamRef.current = stream;
 
-      setStatus('Connecting to Zara...');
       const ai = getAI();
-      const session = await ai.live.connect({
+      const currentDate = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      
+      // 3. Connect to Live API
+      setStatus('Connecting to Gemini...');
+      
+      const sessionPromise = ai.live.connect({
         model: 'gemini-2.5-flash-native-audio-preview-09-2025',
         callbacks: {
           onopen: () => {
             if (isActiveRef.current) {
                 isConnectedRef.current = true;
-                if (isMountedRef.current) setStatus('Listening...');
+                if (isMountedRef.current) setStatus('Online');
             }
           },
-          onmessage: async (message: LiveServerMessage) => {
+          onmessage: async (message: any) => {
              if (!isActiveRef.current) return;
 
-             // Handle Tool Calls (Media Player)
+             // Handle Tool Calls
              if (message.toolCall) {
                 const calls = message.toolCall.functionCalls;
                 if (calls && calls.length > 0) {
@@ -251,46 +260,49 @@ export const LiveMode: React.FC<LiveModeProps> = ({ personalization }) => {
                    if (call.name === 'play_media') {
                        const args = call.args as any;
                        let url = '';
-                       let embedUrl = undefined;
-
+                       
                        if (args.platform === 'spotify') {
                            url = `https://open.spotify.com/search/${encodeURIComponent(args.query)}`;
                        } else {
-                           // Default to YouTube
                            url = `https://www.youtube.com/results?search_query=${encodeURIComponent(args.query)}`;
-                           // Embeds via search query are unreliable and often throw errors.
-                           // We disabled the embedUrl to ensure a consistent experience via the external link card.
-                           embedUrl = undefined;
                        }
 
                        if (isMountedRef.current) {
-                          setMediaCard({
-                              action: 'PLAY_MEDIA',
-                              media_type: args.media_type,
-                              title: args.title,
-                              artist: args.artist,
-                              platform: args.platform,
-                              url: url,
-                              embedUrl: embedUrl,
-                              query: args.query
-                          });
+                          if (args.media_type === 'video') {
+                              window.open(url, '_blank');
+                              setMessages(prev => [...prev, { 
+                                  id: crypto.randomUUID(), 
+                                  role: 'model', 
+                                  text: `[Opened ${args.title} in new tab]` 
+                              }]);
+                          } else {
+                              setMediaCard({
+                                  action: 'PLAY_MEDIA',
+                                  media_type: args.media_type,
+                                  title: args.title,
+                                  artist: args.artist,
+                                  platform: args.platform,
+                                  url: url,
+                                  query: args.query
+                              });
+                          }
                        }
 
-                       // Send Response back to model
-                       if (sessionRef.current) {
-                          sessionRef.current.sendToolResponse({
+                       // Use the promise to send tool response
+                       sessionPromise.then(session => {
+                          session.sendToolResponse({
                               functionResponses: [{
                                   id: call.id,
                                   name: call.name,
-                                  response: { result: "Media player opened for user." }
+                                  response: { result: args.media_type === 'video' ? "Video opened in new tab." : "Audio player active." }
                               }]
                           });
-                       }
+                       });
                    }
                 }
              }
 
-             // Handle Text Transcription
+             // Handle Transcription
              let newText = '';
              let role: 'user' | 'model' | null = null;
 
@@ -339,75 +351,103 @@ export const LiveMode: React.FC<LiveModeProps> = ({ personalization }) => {
              }
           },
           onclose: () => {
-            if (isActiveRef.current) { 
+            if (!isUserStoppingRef.current && isActiveRef.current) {
+                setStatus("Reconnecting...");
+            } else {
                 cleanup();
                 if (isMountedRef.current) setStatus('Disconnected');
             }
           },
-          onerror: (err) => {
-             const msg = err instanceof Error ? err.message : String(err);
-             if (msg.toLowerCase().includes('permission') || msg.toLowerCase().includes('quota')) {
-                 cleanup();
-                 if (isMountedRef.current) {
-                    setError(`Connection Error: ${msg}`);
-                    setStatus('Error');
-                 }
+          onerror: (err: any) => {
+             console.error("Live API Error:", err);
+             // Ensure we don't loop endlessly on fatal auth errors
+             if (!isUserStoppingRef.current && isActiveRef.current) {
+                 setError("Connection Error. Retrying...");
+                 if (isMountedRef.current) setStatus("Reconnecting...");
              }
           }
         },
         config: {
-            responseModalities: [Modality.AUDIO],
-            tools: [{ functionDeclarations: [MEDIA_PLAYER_TOOL] }],
+            responseModalities: [Modality.AUDIO], // Strictly typed
+            tools: [
+                { functionDeclarations: [MEDIA_PLAYER_TOOL] }, 
+                { googleSearch: {} } 
+            ],
             speechConfig: {
                 voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Zephyr' } }
             },
             inputAudioTranscription: {},
             outputAudioTranscription: {},
-            systemInstruction: buildSystemInstruction(personalization)
+            systemInstruction: buildSystemInstruction(personalization) + 
+              `\n\n**LIVE CONTEXT & FRIENDLY MODE (IMPORTANT):**
+              1. **CURRENT DATE**: Today is ${currentDate}.
+              2. **REAL-TIME INFO**: Use Google Search for current events.
+              3. **FRIENDLY PERSONA**: You are a "Nanba" (Best Friend). Speak casually, warmly, and use colloquial language. No robotic speech.
+              4. **LANGUAGE**: Detect the user's language immediately. If they speak Tanglish/Tamil, reply in Tanglish/Tamil.
+              5. **CREATOR**: Created by Mohammed Majeed (your genius developer friend).`
         }
       });
 
-      sessionRef.current = session;
+      // Wait for session to be established before setting ref, but allow processor to use promise
+      try {
+          sessionRef.current = await sessionPromise;
+      } catch(err: any) {
+          // If connection fails immediately (e.g. auth), catch here
+          throw new Error(err.message || "Failed to establish Live session");
+      }
 
-      // INPUT GAIN (MICROPHONE BOOST 150%)
       const source = inputCtx.createMediaStreamSource(stream);
-      const inputGain = inputCtx.createGain();
-      inputGain.gain.value = 1.5; 
-      source.connect(inputGain);
-
-      const processor = inputCtx.createScriptProcessor(4096, 1, 1);
+      const processor = inputCtx.createScriptProcessor(2048, 1, 1);
       processorRef.current = processor;
-      inputGain.connect(processor);
+      source.connect(processor);
       processor.connect(inputCtx.destination); 
 
       processor.onaudioprocess = (e) => {
-         if (!sessionRef.current || !isActiveRef.current || !isConnectedRef.current) return;
+         if (!isActiveRef.current) return;
+         
          let inputData = e.inputBuffer.getChannelData(0);
+         
+         // Visualizer Volume
          if (isMountedRef.current) {
             let sum = 0;
             const len = inputData.length;
-            for (let i=0; i<len; i+=10) sum += inputData[i] * inputData[i];
-            const rms = Math.sqrt(sum / (len/10));
+            const step = 32; 
+            for (let i=0; i<len; i+=step) sum += inputData[i] * inputData[i];
+            const rms = Math.sqrt(sum / (len/step));
             setVolume(Math.min(rms * 5, 1)); 
          }
-         // Manual downsample if native context was forced to 48k by browser
+         
          if (inputCtx.sampleRate !== 16000) {
              inputData = downsampleBuffer(inputData, inputCtx.sampleRate, 16000);
          }
          const pcmData = float32ToInt16(inputData);
          const pcmBase64 = arrayBufferToBase64(pcmData.buffer);
-         try {
-             sessionRef.current.sendRealtimeInput({
-                media: { mimeType: 'audio/pcm;rate=16000', data: pcmBase64 }
-            });
-         } catch(err) {}
+         
+         // Use the session promise to send data to avoid race conditions
+         sessionPromise.then(session => {
+             if(isConnectedRef.current) {
+                 try {
+                     session.sendRealtimeInput({
+                        media: { mimeType: 'audio/pcm;rate=16000', data: pcmBase64 }
+                    });
+                 } catch(err) {
+                     // Squelch errors during teardown
+                 }
+             }
+         }).catch(() => {});
       };
 
     } catch (e: any) {
-      cleanup();
       if (isMountedRef.current) {
+         console.error("Connection Setup Error:", e);
          setError(`Connection Failed: ${e.message}`);
          setStatus('Failed');
+         // Auto-retry once after 2s if it was a network glitch
+         if (isActiveRef.current) {
+             setTimeout(() => {
+                 if (isActiveRef.current && !isConnectedRef.current) connect();
+             }, 2000);
+         }
       }
     }
   };
@@ -418,9 +458,10 @@ export const LiveMode: React.FC<LiveModeProps> = ({ personalization }) => {
        return;
     }
     if (isActive) {
+      isUserStoppingRef.current = true;
       cleanup();
-      setStatus('Ready to connect');
     } else {
+      isUserStoppingRef.current = false;
       connect();
     }
   };
@@ -428,51 +469,44 @@ export const LiveMode: React.FC<LiveModeProps> = ({ personalization }) => {
   return (
     <div className="h-full flex flex-col relative overflow-hidden animate-fade-in">
       
-      {/* --- TOP: Visualizer & Status --- */}
-      <div className={`flex-shrink-0 flex flex-col items-center justify-center transition-all duration-500 bg-gradient-to-b from-surfaceHighlight/30 to-transparent ${messages.length > 0 ? 'h-[200px]' : 'h-[300px]'}`}>
+      <div className={`flex-shrink-0 flex flex-col items-center justify-center transition-all duration-300 bg-gradient-to-b from-surfaceHighlight/30 to-transparent ${messages.length > 0 ? 'h-[180px]' : 'h-[300px]'}`}>
         
-        {/* Connection Status */}
-        <div className="flex items-center gap-2 mb-6">
-           <div className={`w-2 h-2 rounded-full ${isActive ? 'bg-green-500 animate-pulse' : error ? 'bg-red-500' : 'bg-gray-400'}`} />
+        <div className="flex items-center gap-3 mb-8">
+           <div className={`w-2.5 h-2.5 rounded-full shadow-[0_0_10px_currentColor] ${isActive ? 'bg-green-500 text-green-500 animate-pulse' : error ? 'bg-red-500 text-red-500' : 'bg-gray-400 text-gray-400'}`} />
            <div className="text-text-sub font-mono text-sm flex items-center gap-2">
               {error ? (
-                <span className="text-red-400 font-medium flex items-center gap-1">
-                   <AlertTriangle className="w-3 h-3" />
+                <span className="text-red-400 font-bold flex items-center gap-1">
+                   <AlertTriangle className="w-3.5 h-3.5" />
                    {error}
                 </span>
               ) : (isAiSpeaking ? (
-                <span className="text-primary font-medium flex items-center gap-1">
-                  <AudioLines className="w-3 h-3 animate-pulse" />
-                  Zara is speaking...
+                <span className="text-primary font-bold flex items-center gap-1.5">
+                  <Activity className="w-4 h-4 animate-bounce" />
+                  Speaking...
                 </span>
               ) : (
-                <span className="flex items-center gap-2">
-                   {status === 'Listening...' && (
-                     <>
-                        <Heart className="w-3.5 h-3.5 text-pink-500 animate-pulse" />
-                        <Globe className="w-3.5 h-3.5 text-blue-500" />
-                     </>
-                   )}
-                   {status}
+                <span className="flex items-center gap-2 font-medium">
+                   {status === 'Connecting to Gemini...' && <Loader2 className="w-3 h-3 animate-spin" />}
+                   <span className="opacity-70">{status}</span>
                 </span>
               ))}
            </div>
         </div>
 
-        {/* Orb Visualizer */}
         <div className="relative flex items-center justify-center">
-            {/* Outer Ring */}
-            <div className={`absolute left-1/2 top-1/2 -ml-20 -mt-20 rounded-full border border-primary/20 transition-all duration-75`}
-                 style={{ width: '160px', height: '160px', transform: `scale(${1 + volume * 0.4})` }} />
+            <div className={`absolute left-1/2 top-1/2 -ml-24 -mt-24 rounded-full border border-primary/20 transition-transform duration-[50ms] ease-linear will-change-transform`}
+                 style={{ width: '192px', height: '192px', transform: `scale(${1 + volume * 0.3})` }} />
             
-            {/* Inner Orb */}
+            <div className={`absolute left-1/2 top-1/2 -ml-20 -mt-20 rounded-full border border-accent/30 transition-transform duration-[75ms] ease-linear will-change-transform`}
+                 style={{ width: '160px', height: '160px', transform: `scale(${1 + volume * 0.5})`, opacity: 0.5 }} />
+
             <div 
-                 className={`w-32 h-32 rounded-full bg-gradient-to-br transition-all duration-300 shadow-[0_0_50px_rgba(139,92,246,0.5)] ${
-                   isAiSpeaking ? 'from-accent to-purple-600 scale-110 shadow-[0_0_80px_rgba(217,70,239,0.6)]' : 'from-primary to-accent blur-md'
+                 className={`w-32 h-32 rounded-full bg-gradient-to-br transition-all duration-100 ease-out shadow-[0_0_50px_rgba(139,92,246,0.5)] will-change-transform ${
+                   isAiSpeaking ? 'from-accent to-purple-600 scale-110 shadow-[0_0_80px_rgba(217,70,239,0.8)]' : 'from-primary to-accent blur-md'
                  }`}
                  style={{ 
-                   transform: isAiSpeaking ? 'scale(1.1)' : `scale(${0.9 + volume * 0.5})`, 
-                   opacity: isActive ? 0.8 + volume * 0.5 : 0.3 
+                   transform: isAiSpeaking ? `scale(${1.1 + volume * 0.2})` : `scale(${0.9 + volume * 0.6})`, 
+                   opacity: isActive ? 0.9 : 0.3 
                  }} 
             />
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -485,7 +519,6 @@ export const LiveMode: React.FC<LiveModeProps> = ({ personalization }) => {
         </div>
       </div>
 
-      {/* --- MEDIA CARD OVERLAY --- */}
       {mediaCard && isActive && (
         <div className="absolute top-4 left-4 right-4 z-50 flex justify-center animate-fade-in pointer-events-none">
            {mediaCard.embedUrl ? (
@@ -501,7 +534,7 @@ export const LiveMode: React.FC<LiveModeProps> = ({ personalization }) => {
                       className="w-full h-full" 
                       allow="autoplay; encrypted-media; picture-in-picture" 
                       allowFullScreen
-                      title="YouTube Video Player"
+                      title="Video Player"
                   />
               </div>
            ) : (
@@ -519,10 +552,10 @@ export const LiveMode: React.FC<LiveModeProps> = ({ personalization }) => {
                      href={mediaCard.url} 
                      target="_blank" 
                      rel="noopener noreferrer"
-                     className="bg-primary hover:bg-primary-dark text-white p-3 rounded-full shadow-lg shadow-primary/20 flex-shrink-0 transition-transform active:scale-95"
-                     title="Play Now"
+                     className="bg-primary hover:bg-primary-dark text-white p-3 rounded-full shadow-lg shadow-primary/20 flex-shrink-0 transition-transform active:scale-95 flex items-center justify-center gap-2"
+                     title="Open in New Tab"
                   >
-                     <Play className="w-5 h-5 fill-current" />
+                     <ExternalLink className="w-5 h-5 fill-current" />
                   </a>
                   <button 
                       onClick={() => setMediaCard(null)}
@@ -535,26 +568,19 @@ export const LiveMode: React.FC<LiveModeProps> = ({ personalization }) => {
         </div>
       )}
 
-      {/* --- MIDDLE: Transcription Chat --- */}
-      <div className="flex-1 overflow-y-auto px-4 md:px-8 py-4 space-y-4 relative">
-        <div className="sticky top-0 right-0 flex justify-end z-10 pointer-events-none">
-            <button onClick={cycleSpeed} className="pointer-events-auto bg-surface/80 backdrop-blur border border-border text-text-sub hover:text-text hover:bg-surfaceHighlight rounded-full px-3 py-1.5 text-xs font-bold shadow-sm transition-all flex items-center gap-1.5 mb-2">
-                <Zap className="w-3 h-3 text-primary" /> {displaySpeed}x
-            </button>
-        </div>
-
+      <div className="flex-1 overflow-y-auto px-4 md:px-8 py-4 space-y-4 relative custom-scrollbar">
         {messages.length === 0 && isActive && (
-             <div className="text-center text-text-sub/40 mt-10">
-               <p>Start speaking...</p>
+             <div className="text-center text-text-sub/40 mt-10 animate-pulse">
+               <p>Listening for your voice...</p>
              </div>
         )}
         {messages.map((msg) => (
           <div key={msg.id} className={`flex w-full ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
-            <div className={`flex max-w-[80%] gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+            <div className={`flex max-w-[85%] gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
                <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center border border-border ${msg.role === 'user' ? 'bg-surfaceHighlight' : 'bg-primary/20'}`}>
                  {msg.role === 'user' ? <User className="w-4 h-4 text-text" /> : <Sparkles className="w-4 h-4 text-primary" />}
                </div>
-               <div className={`px-4 py-2.5 rounded-2xl text-[15px] ${
+               <div className={`px-4 py-2.5 rounded-2xl text-[15px] leading-relaxed shadow-sm ${
                   msg.role === 'user' 
                     ? 'bg-gradient-to-br from-primary/20 to-blue-600/10 text-text rounded-tr-sm border border-primary/20' 
                     : 'bg-gradient-to-br from-surface/40 to-surface/10 backdrop-blur-sm border border-white/5 text-text rounded-tl-sm'
@@ -567,39 +593,38 @@ export const LiveMode: React.FC<LiveModeProps> = ({ personalization }) => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* --- BOTTOM: Controls --- */}
       <div className="flex-shrink-0 p-6 bg-surface/30 backdrop-blur border-t border-border flex flex-col items-center gap-3">
         {error && (
           <div className="mb-4 text-center">
-            <p className="text-sm text-red-400 mb-2">{error}</p>
-            <button onClick={() => { setError(null); connect(); }} className="flex items-center gap-2 text-xs bg-surfaceHighlight hover:bg-surface px-4 py-2 rounded-lg border border-white/10 mx-auto">
-              <RefreshCw className="w-3 h-3" /> Retry Connection
+            <p className="text-sm text-red-400 mb-2 font-medium">{error}</p>
+            <button onClick={() => { setError(null); connect(); }} className="flex items-center gap-2 text-xs bg-surfaceHighlight hover:bg-surface px-4 py-2 rounded-lg border border-white/10 mx-auto transition-colors">
+              <RefreshCw className="w-3 h-3" /> Reconnect
             </button>
           </div>
         )}
         
         <button
           onClick={toggleConnection}
-          className={`px-8 py-3 rounded-full font-bold text-base transition-all flex items-center gap-2 shadow-lg ${
+          className={`px-10 py-4 rounded-full font-bold text-lg transition-all flex items-center gap-3 shadow-xl transform active:scale-95 ${
             isActive 
-              ? 'bg-red-500 text-white hover:bg-red-600 shadow-red-500/20' 
-              : 'bg-text text-background hover:opacity-90'
+              ? 'bg-red-500 text-white hover:bg-red-600 shadow-red-500/30' 
+              : 'bg-text text-background hover:opacity-90 shadow-white/10'
           }`}
         >
           {isActive ? (
             <>
-              <MicOff className="w-5 h-5" />
+              <MicOff className="w-6 h-6" />
               End Session
             </>
           ) : (
             <>
-              <Mic className="w-5 h-5" />
-              Start Live Chat
+              <Mic className="w-6 h-6" />
+              Start Live
             </>
           )}
         </button>
-        <p className="text-xs text-text-sub flex items-center gap-1">
-           <AlertTriangle className="w-3 h-3 text-yellow-500" /> Headphones recommended
+        <p className="text-[10px] text-text-sub/70 flex items-center gap-1.5 mt-2">
+           <AlertTriangle className="w-3 h-3 text-green-500" /> Adaptive Mode • Auto-Tone & Language
         </p>
       </div>
 

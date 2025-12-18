@@ -30,6 +30,7 @@ import { FlashcardMode } from './components/FlashcardMode';
 import { VideoMode } from './components/VideoMode';
 import { NotesVault } from './components/NotesVault';
 import { AppBuilderMode } from './components/AppBuilderMode';
+import { GithubMode } from './components/GithubMode';
 import { CommandPalette } from './components/CommandPalette';
 import { HomeDashboard } from './components/features/HomeDashboard';
 import { LifeOS } from './components/features/LifeOS';
@@ -352,6 +353,7 @@ const App: React.FC = () => {
       case 'pricing': return <PricingView />;
       case 'mastery': return <FlashcardMode />;
       case 'video': return <VideoMode />;
+      case 'github': return <GithubMode />;
       case 'chat':
       default:
         const fontSizeClass = personalization.fontSize === 'large' ? 'text-lg' : personalization.fontSize === 'small' ? 'text-sm' : 'text-base';

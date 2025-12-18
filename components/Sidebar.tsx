@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { MessageSquare, GraduationCap, Code2, Layout, Settings, Sparkles, Mic, Radio, Plus, Trash2, MessageCircle, Sun, Moon, Edit2, Check, X, Image as ImageIcon, ClipboardCheck, BarChart3, Calendar, PenTool, Info, Hammer, Heart, Brain, Zap, FolderOpen, Lightbulb, RotateCw } from 'lucide-react';
+import { MessageSquare, GraduationCap, Code2, Layout, Settings, Sparkles, Mic, Radio, Plus, Trash2, MessageCircle, Sun, Moon, Edit2, Check, X, Image as ImageIcon, ClipboardCheck, BarChart3, Calendar, PenTool, Info, Hammer, Heart, Brain, Zap, FolderOpen, Lightbulb, RotateCw, Github } from 'lucide-react';
 import { ViewMode, ChatSession } from '../types';
 import { useTheme } from '../theme/ThemeContext';
 
@@ -152,6 +152,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <NavItem icon={ClipboardCheck} label="Exam Prep" active={currentView === 'exam'} onClick={() => onViewChange('exam')} />
           <NavItem icon={Code2} label="Code" active={currentView === 'code'} onClick={() => onViewChange('code')} />
           <NavItem icon={Hammer} label="App Builder" active={currentView === 'builder'} onClick={() => onViewChange('builder')} />
+          <NavItem icon={Github} label="GitHub Analyzer" active={currentView === 'github'} onClick={() => onViewChange('github')} />
         </div>
 
         {/* Chat History Section */}

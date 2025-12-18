@@ -20,7 +20,8 @@ export const MODE_THEME_MAPPING: Partial<Record<ViewMode, ThemeName>> = {
   memory: 'glass',
   creative: 'aurora',
   pricing: 'royal',
-  builder: 'midnight'
+  builder: 'midnight',
+  github: 'midnight'
 };
 
 export const DEFAULT_SYSTEM_CONFIG = {

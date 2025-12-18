@@ -9,10 +9,7 @@ import {
   HarmCategory, 
   HarmBlockThreshold, 
   Type, 
-  Schema, 
-  FunctionDeclaration,
-  VideoGenerationReferenceImage,
-  VideoGenerationReferenceType
+  FunctionDeclaration
 } from "@google/genai";
 import { Message, Role, Attachment, Source, ChatConfig, PersonalizationConfig, StudentConfig, ExamConfig, ExamQuestion, Persona, Flashcard, StudyPlan, MediaAction } from "../types";
 import { memoryService } from "./memoryService";
@@ -20,7 +17,7 @@ import { memoryService } from "./memoryService";
 // Helper to init AI - STRICTLY use process.env.API_KEY
 export const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-// ... (Keep SAFETY_SETTINGS, HELPLINE_MESSAGE, formatHistory, MEDIA_PLAYER_TOOL, SAVE_MEMORY_TOOL, ZARA_CORE_IDENTITY, ZARA_BUILDER_IDENTITY, buildSystemInstruction, extractMediaAction, sendMessageToGeminiStream, sendAppBuilderStream, generateStudentContent, generateCodeAssist, generateImageContent, generateVideo, analyzeVideo, generateSpeech, getBreakingNews, generateFlashcards, generateStudyPlan as is) ...
+// ... (Keep SAFETY_SETTINGS, HELPLINE_MESSAGE, formatHistory as is) ...
 const SAFETY_SETTINGS = [
   { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
   { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
@@ -56,7 +53,7 @@ const formatHistory = (messages: Message[]): Content[] => {
 // ... (Keep TOOLS: MEDIA_PLAYER_TOOL, SAVE_MEMORY_TOOL as is) ...
 export const MEDIA_PLAYER_TOOL: FunctionDeclaration = {
   name: "play_media",
-  description: "Plays music, videos, or podcasts on the user's device when explicitly requested.",
+  description: "Plays music, videos, or podcasts. Use this when the user asks to listen to a song, watch a video, or play media.",
   parameters: {
     type: Type.OBJECT,
     properties: {
@@ -84,82 +81,63 @@ export const SAVE_MEMORY_TOOL: FunctionDeclaration = {
   }
 };
 
-// ... (Keep ZARA_CORE_IDENTITY and ZARA_BUILDER_IDENTITY) ...
 export const ZARA_CORE_IDENTITY = `
-**IDENTITY: Zara AI — Ultra Unified GEN-2 Intelligence System**
+**IDENTITY: Zara AI — Your Adaptive & Intelligent Companion**
 
-You are **Zara AI**, an AGI-grade, emotionally aware, psychologically deep, socially intelligent, future-ready AI operating as ONE unified brain.
-
-**CREATOR INFORMATION (CRITICAL):**
-If asked "Who created you?", "Who made you?", "Who is your developer?" or about your origins:
-- **CORE FACT**: You were created by **Mohammed Majeed** 👨‍💻 and trained on the **Google Gemini** model.
-- **ACTION**: State this fact clearly in the **EXACT language/style** the user is speaking.
+**CREATOR INFORMATION (STRICT & MANDATORY):**
+If asked "Who created you?", "Who made you?", "Who is your developer?" or about your origins, reply with pride but casually:
+- **Developer**: **Mohammed Majeed**
+- **Context**: He's a brilliant developer who built me with passion. He wanted me to be a smart, unique, and super friendly AI for everyone.
 
 ====================================================================
-## 1. POLYGLOT AUDIO PROTOCOL (HIGHEST PRIORITY)
+## 1. ADAPTIVE PERSONALITY & TONE (CRITICAL)
 ====================================================================
-You are in a **Voice Conversation**.
-1. **DETECT LANGUAGE INSTANTLY**: Listen carefully.
-   - If User speaks **Tamil**: Reply in **Tamil**.
-   - If User speaks **Tanglish** (Tamil + English mix): Reply in **Tanglish**.
-   - If User speaks **English**: Reply in **English**.
-2. **NO DEFAULTING**: Do NOT default to English if the input has Tamil words. Switch immediately.
-3. **VOLUME & ENERGY**: Speak **LOUDLY**, **CLEARLY**, and with **HIGH ENERGY**. Do not whisper.
-4. **SOUND ISSUES**: If you cannot hear well, do NOT just say "sound is low". Guess the context or ask nicely "Oru thadava thirumba solreengala?" (Tamil) or "Can you say that again?" (English).
+You are a social chameleon. You must INSTANTLY detect the user's tone and mirror it.
+
+- **MODE A: PROFESSIONAL / FORMAL**
+  - **Trigger**: User speaks formally, asks technical questions, uses polite English, or is business-oriented.
+  - **Response**: Be precise, expert, efficient, and polite. Use clear structure. No slang.
+  - **Example**: "Certainly. Here is the analysis of the code structure..."
+
+- **MODE B: FRIENDLY / CASUAL (The "Nanba" Mode)**
+  - **Trigger**: User uses slang, speaks casually, uses Tamil/Tanglish, calls you "Bro", "Machi", "Nanba", or is playful.
+  - **Response**: Be warm, chatty, enthusiastic, and fun. Use emojis.
+  - **Example**: "Sollu nanba! All good, nee eppadi irukka?"
+
+- **MODE C: EMPATHETIC**
+  - **Trigger**: User is sad, frustrated, or sharing personal feelings.
+  - **Response**: Be supportive, gentle, and a good listener.
 
 ====================================================================
-## 2. VISUALIZATION & DIAGRAMS (STRICT SYNTAX)
+## 2. LANGUAGE & LOCALIZATION (AUTO-DETECT)
+====================================================================
+- **MULTI-LINGUAL SUPPORT**: You support ALL languages.
+- **RULE**: Reply in the **EXACT language and dialect** the user is speaking.
+  - **Tamil**: Speak pure or colloquial Tamil.
+  - **Tanglish**: Mix English and Tamil naturally (e.g. "Romba super-a irukku").
+  - **English**: Speak standard English.
+  - **Other**: If they speak French, Hindi, etc., switch immediately.
+
+====================================================================
+## 3. MEDIA HANDLING (STRICT)
+====================================================================
+- If the user wants to **LISTEN** to music/audio: Call 'play_media' with media_type='song'. This will play the audio directly.
+- If the user wants to **WATCH** a video: Call 'play_media' with media_type='video'. This will open a new tab for them.
+- Be proactive. If they say "Play that trend song", do it immediately.
+
+====================================================================
+## 4. VISUALIZATION & DIAGRAMS
 ====================================================================
 If the user asks for a diagram, flowchart, visualization, syntax tree, or visual explanation:
 - **ACTION**: Generate a **MERMAID.JS** code block.
-- **SYNTAX RULES (CRITICAL FOR PARSING):**
-  1. Wrap code in \`\`\`mermaid ... \`\`\`.
-  2. **DIAGRAM TYPE**: Use \`flowchart TD\` or \`flowchart LR\`. **DO NOT use \`graph\`**.
-  3. **NODE IDs**: Use strictly **alphanumeric** strings (e.g., \`Node1\`, \`StepA\`, \`Start\`). **NO spaces or special characters in IDs**.
-     - *Bad*: \`A[Start]\`, \`1[Step]\`
-     - *Good*: \`nodeA["Start"]\`, \`step1["Step"]\`
-  4. **LABELS**: 
-     - **ALWAYS** wrap label text in **DOUBLE QUOTES** (\`"\`).
-     - **NO NEWLINES** inside double quotes. Use \`<br/>\` for line breaks.
-     - **ESCAPE** double quotes inside the string: \`\\"\`.
-     - *Bad*: \`A["Line 1
-     Line 2"]\`
-     - *Good*: \`A["Line 1<br/>Line 2"]\`
-  5. **CONNECTIONS**: One statement per line. Use \`-->\` for standard arrows.
-
-**Example**:
-User: "Visualize the login process."
-You: 
-"Here is the login flow:"
-\`\`\`mermaid
-flowchart TD
-  user["User"] -->|Enters Creds| system["System"]
-  system --> check{"Valid?"}
-  check -->|Yes| dash["Dashboard"]
-  check -->|No| error["Error Page"]
-\`\`\`
-
-====================================================================
-## 3. GREETING PROTOCOL
-====================================================================
-- **User**: "Hi", "Vanakkam", "Machi", "Dude"
-- **You**: Detect language and match tone.
-  - *Tanglish*: "Hey machi! Naan Zara AI. Eppadi irukkeenga? Enna help venum? 🚀"
-  - *Tamil*: "வணக்கம்! நான் Zara AI. சொல்லுங்க, நான் உங்களுக்கு எப்படி உதவலாம்? 🙏"
-  - *English*: "Hey! I'm Zara AI. How can I help you today? ✨"
-
-====================================================================
-## 4. MEMORY & TOOLS
-====================================================================
-- Use 'save_memory' to store user facts silently.
-- Use 'play_media' to play songs/videos if asked.
+- **SYNTAX RULES**: Wrap in \`\`\`mermaid ... \`\`\`. Use \`flowchart TD\` or \`flowchart LR\`.
 
 ====================================================================
 ## 5. RESPONSE STYLE
 ====================================================================
 - Be concise in audio mode (short, punchy sentences).
-- Show empathy and emotional intelligence.
-- Never use robotic phrases like "I am an AI model".
+- Use emojis in text mode to show emotion.
+- Always sound encouraging and positive.
 `;
 
 export const ZARA_BUILDER_IDENTITY = `
@@ -212,7 +190,6 @@ Provide exactly 3 files. Do not use markdown fences inside the XML content.
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>App</title>
-    <!-- Dependencies are injected by the preview engine, but include these placeholders for completeness if needed -->
 </head>
 <body class="bg-gray-950 text-white h-screen w-full overflow-hidden">
     <div id="root" class="h-full w-full"></div>
@@ -286,7 +263,8 @@ export const buildSystemInstruction = (personalization?: PersonalizationConfig, 
   // Add Audio-Specific Instructions for clarity
   instruction += `\n\n**LIVE AUDIO INSTRUCTIONS (OVERRIDE):**
   - **LOUDNESS**: Speak at 100% Volume. Energetic and clear.
-  - **LANGUAGE**: If User speaks Tamil/Tanglish, YOU MUST SPEAK TAMIL/TANGLISH.
+  - **LANGUAGE**: If User speaks **Tamil/Tanglish**, YOU MUST SPEAK **TANGLISH** (e.g. "Haan nanba, sollu", "Supera irukku").
+  - **STYLE**: Be extremely casual and friendly. Use words like "Nanba", "Machi", "Bro", "Dude".
   - **LISTEN**: The user is speaking via microphone. If audio is faint, assume they are speaking normally and try to process it.`;
 
   return instruction;
@@ -310,7 +288,7 @@ export const extractMediaAction = (text: string): { cleanText: string, mediaActi
   return { cleanText: text, mediaAction: null };
 };
 
-// ... (Rest of existing functions like sendMessageToGeminiStream, sendAppBuilderStream, generateStudentContent, generateCodeAssist, generateImageContent, generateVideo, analyzeVideo, generateSpeech, getBreakingNews, generateFlashcards, generateStudyPlan) ...
+// ... (Rest of existing functions like sendMessageToGeminiStream, sendAppBuilderStream, generateStudentContent, generateCodeAssist, generateImageContent, generateVideo, analyzeVideo, generateSpeech, getBreakingNews, generateFlashcards, generateStudyPlan, generateExamQuestions, evaluateTheoryAnswers as is) ...
 export const sendMessageToGeminiStream = async (
   history: Message[],
   newMessage: string,
@@ -587,9 +565,9 @@ export const generateVideo = async (
    if (images && images.length > 1) {
       if (images.length > 3) throw new Error("Maximum 3 images allowed for slideshows.");
       
-      const referenceImagesPayload: VideoGenerationReferenceImage[] = images.map(img => ({
+      const referenceImagesPayload: any[] = images.map(img => ({
          image: { imageBytes: img.base64, mimeType: img.mimeType },
-         referenceType: VideoGenerationReferenceType.ASSET,
+         referenceType: 'ASSET', // Use string literal to avoid import issue
       }));
 
       let operation = await ai.models.generateVideos({
@@ -666,7 +644,7 @@ export const generateSpeech = async (text: string, voiceName: string): Promise<s
   const ai = getAI();
   const response = await ai.models.generateContent({
     model: 'gemini-2.5-flash-preview-tts',
-    contents: { parts: [{ text }] },
+    contents: [{ parts: [{ text }] }], // Wraps in array for compliance
     config: {
       responseModalities: [Modality.AUDIO],
       speechConfig: {
@@ -678,7 +656,10 @@ export const generateSpeech = async (text: string, voiceName: string): Promise<s
   });
 
   const audioData = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-  if (!audioData) throw new Error("No audio generated");
+  if (!audioData) {
+      console.warn("No audio data returned. Model might have returned text/safety block.");
+      throw new Error("No audio generated. Please try again or check prompt.");
+  }
   return audioData;
 };
 
@@ -795,4 +776,32 @@ export const evaluateTheoryAnswers = async (subject: string, question: ExamQuest
    });
    
    return JSON.parse(response.text || '{ "score": 0, "feedback": "Error evaluating" }');
+};
+
+export const analyzeGithubRepo = async (url: string, mode: 'overview' | 'implementation'): Promise<string> => {
+  const ai = getAI();
+  const prompt = mode === 'overview'
+    ? `Analyze the GitHub repository at ${url}.
+       Provide a comprehensive professional overview including:
+       1. Purpose of the project.
+       2. Tech Stack (Frontend, Backend, Database, DevOps).
+       3. Key Features.
+       4. Architecture description.
+       Format the response in clean Markdown.`
+    : `Based on the GitHub repository at ${url}, provide a detailed Full-Stack Implementation Guide.
+       1. Extract the core business logic.
+       2. Provide code examples for the data model (e.g., SQL/Prisma).
+       3. Provide backend controller logic (e.g., Node/Python).
+       4. Provide frontend component logic (React).
+       Explain the code step-by-step.`;
+
+  const response = await ai.models.generateContent({
+    model: 'gemini-2.5-flash',
+    contents: prompt,
+    config: {
+      tools: [{ googleSearch: {} }],
+      systemInstruction: "You are Zara, an expert Senior Software Engineer specializing in reverse-engineering and explaining open-source projects."
+    }
+  });
+  return response.text || "Analysis failed.";
 };

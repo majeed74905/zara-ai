@@ -25,7 +25,8 @@ export type ViewMode =
   | 'memory'
   | 'creative'
   | 'pricing'
-  | 'video';
+  | 'video'
+  | 'github';
 
 export interface Attachment {
   id: string;
