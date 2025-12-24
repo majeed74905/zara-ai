@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Mic, MicOff, Radio, AlertTriangle, User, Sparkles, Activity, WifiOff, X, Music, Youtube, RefreshCw, ExternalLink, Loader2 } from 'lucide-react';
-import { GoogleGenAI } from "@google/genai";
+/* Import Modality from @google/genai as per guidelines */
+import { GoogleGenAI, Modality } from "@google/genai";
 import { buildSystemInstruction, MEDIA_PLAYER_TOOL } from '../services/gemini';
 import { float32ToInt16, base64ToUint8Array, decodeAudioData, arrayBufferToBase64 } from '../utils/audioUtils';
 import { PersonalizationConfig, MediaAction } from '../types';
@@ -221,12 +222,13 @@ export const LiveMode: React.FC<LiveModeProps> = ({ personalization }) => {
                        }
 
                        sessionPromise.then(session => {
+                          /* Fix: session.sendToolResponse expects functionResponses as an object according to guidelines */
                           session.sendToolResponse({
-                              functionResponses: [{
+                              functionResponses: {
                                   id: call.id,
                                   name: call.name,
                                   response: { result: "ok" }
-                              }]
+                              }
                           });
                        });
                    }
@@ -290,7 +292,8 @@ export const LiveMode: React.FC<LiveModeProps> = ({ personalization }) => {
           }
         },
         config: {
-            responseModalities: ['AUDIO'],
+            /* Fix Modality type error: use enum value instead of string literal 'AUDIO' */
+            responseModalities: [Modality.AUDIO],
             tools: [{ functionDeclarations: [MEDIA_PLAYER_TOOL] }],
             speechConfig: {
                 voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Zephyr' } }
@@ -333,7 +336,7 @@ export const LiveMode: React.FC<LiveModeProps> = ({ personalization }) => {
          const pcmData = float32ToInt16(inputData);
          const pcmBase64 = arrayBufferToBase64(pcmData.buffer);
          
-         // Solely rely on sessionPromise resolve to send data
+         /* Fix: Initiation of sendRealtimeInput after connect call resolves using sessionPromise.then() */
          sessionPromise.then(session => {
             try {
                 session.sendRealtimeInput({
