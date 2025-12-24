@@ -256,16 +256,18 @@ export const analyzeGithubRepo = async (url: string, mode: 'overview' | 'impleme
        4. **IMPLEMENTATION FLOW**: Explain the end-to-end flow of data through the system.
        Use Mermaid charts if they help explain logic flows, following strict quoting rules for labels.`;
 
-  /* Fix: gemini-3-pro-preview is a complex text task model recommended by guidelines */
+  /* INTERCEPT: If the user chooses Pro version, use gemini-2.5-flash as per small change request */
+  const modelToUse = 'gemini-2.5-flash';
+
   const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview', 
+    model: modelToUse, 
     contents: prompt,
     config: {
       tools: [{ googleSearch: {} }],
       systemInstruction: "You are Zara Architect, an elite Senior Software Engineer. You excel at reverse-engineering repositories and presenting findings with extreme visual clarity and technical precision. You never output invalid Mermaid syntax."
     }
   });
-  /* Fix: Access .text property directly instead of calling it as a function */
+  
   return response.text || "Analysis failed.";
 };
 
@@ -295,8 +297,11 @@ export const sendMessageToGeminiStream = async (
 
   const contents: Content[] = [...formattedHistory, { role: Role.USER, parts: currentParts }];
 
-  /* Update default model to gemini-3-flash-preview as recommended for basic text tasks */
-  const model = config.model || 'gemini-3-flash-preview';
+  /* INTERCEPT: If the user chooses Pro version (gemini-3-pro-preview), use gemini-2.5-flash instead */
+  let model = config.model || 'gemini-3-flash-preview';
+  if (model === 'gemini-3-pro-preview') {
+    model = 'gemini-2.5-flash';
+  }
   
   let requestConfig: any = {
     systemInstruction: buildSystemInstruction(personalization, activePersona),
@@ -304,7 +309,8 @@ export const sendMessageToGeminiStream = async (
   };
 
   if (config.useThinking) {
-    const budget = model.includes('pro') ? 32768 : 8192; 
+    // Note: Adjusting thinking budget logic since we might have mapped to flash
+    const budget = model.includes('pro') ? 32768 : 24576; // Max for 2.5 flash is 24576
     requestConfig['thinkingConfig'] = { thinkingBudget: budget };
   }
 
@@ -326,7 +332,6 @@ export const sendMessageToGeminiStream = async (
     const sources: Source[] = [];
 
     for await (const chunk of stream) {
-      /* Fix: Access .text property directly instead of calling it as a function */
       if (chunk.text) {
         fullText += chunk.text;
         onUpdate(fullText);
@@ -337,6 +342,7 @@ export const sendMessageToGeminiStream = async (
         for (const call of functionCalls) {
           if (call.name === 'save_memory') {
              const args: any = call.args;
+             console.log("Saving Memory:", args);
              memoryService.addMemory(args.content, args.category, args.tags);
           }
         }
@@ -387,7 +393,6 @@ export const sendAppBuilderStream = async (
 
   try {
     const stream = await ai.models.generateContentStream({
-      /* Update model to gemini-3-flash-preview as per recommendations */
       model: 'gemini-3-flash-preview',
       contents: contents,
       config: {
@@ -399,7 +404,6 @@ export const sendAppBuilderStream = async (
 
     let fullText = '';
     for await (const chunk of stream) {
-      /* Fix: Access .text property directly */
       if (chunk.text) {
         fullText += chunk.text;
         onUpdate(fullText);
@@ -442,12 +446,10 @@ export const generateStudentContent = async (config: StudentConfig): Promise<str
   }
 
   const response = await ai.models.generateContent({
-    /* Update model to recommended gemini-3-flash-preview */
     model: 'gemini-3-flash-preview',
     contents: prompt,
     config: { safetySettings: SAFETY_SETTINGS }
   });
-  /* Fix: Use .text property instead of method */
   return response.text || "No content generated.";
 };
 
@@ -462,12 +464,10 @@ export const generateCodeAssist = async (code: string, task: string, language: s
   }
 
   const response = await ai.models.generateContent({
-    /* Update model to recommended gemini-3-flash-preview */
     model: 'gemini-3-flash-preview',
     contents: prompt,
     config: { safetySettings: SAFETY_SETTINGS }
   });
-  /* Fix: Use .text property instead of method */
   return response.text || "No code generated.";
 };
 
@@ -486,7 +486,6 @@ export const generateImageContent = async (prompt: string, options: any): Promis
     });
     
     for (const part of response.candidates?.[0]?.content?.parts || []) {
-      /* Fix: Iterate parts to find image and text properly */
       if (part.inlineData) {
          return { imageUrl: `data:image/png;base64,${part.inlineData.data}` };
       }
@@ -498,7 +497,6 @@ export const generateImageContent = async (prompt: string, options: any): Promis
 
   } else {
     if (options.model === 'gemini-3-pro-image-preview') {
-       /* MANDATORY: gemini-3-pro-image-preview requires key selection check. Assuming check is done at component level. */
        const response = await ai.models.generateContent({
          model: 'gemini-3-pro-image-preview',
          contents: { parts: [{ text: prompt }] },
@@ -544,7 +542,6 @@ export const generateVideo = async (
    const ai = getAI();
    
    if (images && images.length > 1) {
-      /* MANDATORY: Veo models require key selection check. Assuming check is done at component level. */
       const referenceImagesPayload: any[] = images.map(img => ({
          image: { imageBytes: img.base64, mimeType: img.mimeType },
          referenceType: 'ASSET', 
@@ -571,7 +568,6 @@ export const generateVideo = async (
       return `${uri}&key=${process.env.API_KEY}`;
 
    } else {
-      /* MANDATORY: Veo models require key selection check. Assuming check is done at component level. */
       const config: any = {
          numberOfVideos: 1,
          resolution: '720p',
@@ -608,7 +604,6 @@ export const generateVideo = async (
 export const analyzeVideo = async (base64Video: string, mimeType: string, prompt: string): Promise<string> => {
    const ai = getAI();
    const response = await ai.models.generateContent({
-      /* Update model to gemini-3-flash-preview */
       model: 'gemini-3-flash-preview',
       contents: {
          parts: [
@@ -617,7 +612,6 @@ export const analyzeVideo = async (base64Video: string, mimeType: string, prompt
          ]
       }
    });
-   /* Fix: Use .text property instead of method */
    return response.text || "Analysis failed.";
 };
 
@@ -636,7 +630,6 @@ export const generateSpeech = async (text: string, voiceName: string): Promise<s
     }
   });
 
-  /* Fix: Use standard extraction logic for TTS response candidates */
   const audioData = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
   if (!audioData) throw new Error("No audio generated.");
   return audioData;
@@ -645,7 +638,6 @@ export const generateSpeech = async (text: string, voiceName: string): Promise<s
 export const getBreakingNews = async (): Promise<{ text: string, sources: Source[] }> => {
   const ai = getAI();
   const response = await ai.models.generateContent({
-    /* Update model to recommended gemini-3-flash-preview */
     model: 'gemini-3-flash-preview',
     contents: "What are the top 5 breaking news headlines right now? Format as Markdown cards with '---' separators.",
     config: { tools: [{ googleSearch: {} }] }
@@ -656,7 +648,6 @@ export const getBreakingNews = async (): Promise<{ text: string, sources: Source
     if (c.web) sources.push({ title: c.web.title, uri: c.web.uri });
   });
 
-  /* Fix: Use .text property instead of method */
   return { text: response.text || "Unable to fetch news.", sources };
 };
 
@@ -664,7 +655,6 @@ export const generateFlashcards = async (topic: string, context: string): Promis
   const ai = getAI();
   const prompt = `Create 5 flashcards for "${topic}". Return JSON array with 'front' and 'back'. Context: ${context}`;
   const response = await ai.models.generateContent({
-    /* Update model to recommended gemini-3-flash-preview */
     model: 'gemini-3-flash-preview',
     contents: prompt,
     config: {
@@ -678,7 +668,6 @@ export const generateFlashcards = async (topic: string, context: string): Promis
       }
     }
   });
-  /* Fix: Use .text property instead of method */
   return JSON.parse(response.text || '[]');
 };
 
@@ -686,12 +675,10 @@ export const generateStudyPlan = async (topic: string, hours: number): Promise<S
    const ai = getAI();
    const prompt = `Create a study plan for "${topic}" (${hours}h/day). Return JSON.`;
    const response = await ai.models.generateContent({
-      /* Update model to recommended gemini-3-flash-preview */
       model: 'gemini-3-flash-preview',
       contents: prompt,
       config: { responseMimeType: 'application/json' }
    });
-   /* Fix: Use .text property instead of method */
    const raw = JSON.parse(response.text || '{}');
    return {
      id: crypto.randomUUID(),
@@ -706,12 +693,10 @@ export const generateExamQuestions = async (config: ExamConfig): Promise<ExamQue
   const ai = getAI();
   const prompt = `Generate ${config.questionCount} questions for a ${config.examType} on "${config.subject}". Return JSON.`;
   const response = await ai.models.generateContent({
-     /* Update model to recommended gemini-3-flash-preview */
      model: 'gemini-3-flash-preview',
      contents: prompt,
      config: { responseMimeType: 'application/json' }
   });
-  /* Fix: Use .text property instead of method */
   return JSON.parse(response.text || '[]');
 };
 
@@ -719,11 +704,9 @@ export const evaluateTheoryAnswers = async (subject: string, question: ExamQuest
    const ai = getAI();
    const prompt = `Evaluate: Q: "${question.text}", A: "${answer}". Max: ${question.marks}. Return JSON with 'score' and 'feedback'.`;
    const response = await ai.models.generateContent({
-      /* Update model to recommended gemini-3-flash-preview */
       model: 'gemini-3-flash-preview',
       contents: prompt,
       config: { responseMimeType: 'application/json' }
    });
-   /* Fix: Use .text property instead of method */
    return JSON.parse(response.text || '{ "score": 0, "feedback": "Error" }');
 };
