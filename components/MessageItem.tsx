@@ -14,6 +14,8 @@ interface MessageItemProps {
 const MermaidDiagram = ({ code }: { code: string }) => {
   const [svg, setSvg] = useState('');
   const idRef = useRef(`mermaid-${Math.random().toString(36).substr(2, 9)}`);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     // Re-initialize with a light theme for the white background
@@ -48,13 +50,74 @@ const MermaidDiagram = ({ code }: { code: string }) => {
     renderDiagram();
   }, [code]);
 
+  const handleDownload = async () => {
+    if (!containerRef.current) return;
+    const svgElement = containerRef.current.querySelector('svg');
+    if (!svgElement) return;
+
+    setIsExporting(true);
+    try {
+      const svgData = new XMLSerializer().serializeToString(svgElement);
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+
+      // HD Quality: Scale up by 3x
+      const scale = 3;
+      const bcr = svgElement.getBoundingClientRect();
+      const width = bcr.width || 800;
+      const height = bcr.height || 600;
+      
+      canvas.width = width * scale;
+      canvas.height = height * scale;
+
+      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(svgBlob);
+
+      img.onload = () => {
+        if (!ctx) return;
+        // Background for contrast
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.scale(scale, scale);
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        const pngUrl = canvas.toDataURL('image/png', 1.0);
+        const downloadLink = document.createElement('a');
+        downloadLink.href = pngUrl;
+        downloadLink.download = `flowchart-${Date.now()}.png`;
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+        URL.revokeObjectURL(url);
+        setIsExporting(false);
+      };
+      img.src = url;
+    } catch (err) {
+      console.error("Export failed", err);
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="my-4 overflow-hidden rounded-xl bg-white border border-gray-200 shadow-md">
-        <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 border-b border-gray-100">
-            <Workflow className="w-3.5 h-3.5 text-indigo-500" />
-            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Visualization</span>
+        <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-100">
+            <div className="flex items-center gap-2">
+                <Workflow className="w-3.5 h-3.5 text-indigo-500" />
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Visualization</span>
+            </div>
+            <button 
+              onClick={handleDownload}
+              disabled={isExporting}
+              className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold text-indigo-600 hover:bg-indigo-50 transition-colors disabled:opacity-50"
+              title="Download HD Image"
+            >
+              {isExporting ? <span className="animate-pulse">EXPORTING...</span> : <><Download className="w-3 h-3" /> DOWNLOAD HD</>}
+            </button>
         </div>
         <div 
+            ref={containerRef}
             className="p-4 flex justify-center overflow-x-auto custom-scrollbar"
             dangerouslySetInnerHTML={{ __html: svg }} 
         />

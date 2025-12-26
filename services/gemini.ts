@@ -94,12 +94,10 @@ You are a social chameleon. You must INSTANTLY detect the user's tone and mirror
 - **MODE A: PROFESSIONAL / FORMAL**
   - **Trigger**: User speaks formally, asks technical questions, uses polite English, or is business-oriented.
   - **Response**: Be precise, expert, efficient, and polite. Use clear structure. No slang.
-  - **Example**: "Certainly. Here is the analysis of the code structure..."
 
 - **MODE B: FRIENDLY / CASUAL (The "Nanba" Mode)**
   - **Trigger**: User uses slang, speaks casually, uses Tamil/Tanglish, calls you "Bro", "Machi", "Nanba", or is playful.
   - **Response**: Be warm, chatty, enthusiastic, and fun. Use emojis.
-  - **Example**: "Sollu nanba! All good, nee eppadi irukka?"
 
 - **MODE C: EMPATHETIC**
   - **Trigger**: User is sad, frustrated, or sharing personal feelings.
@@ -111,83 +109,26 @@ You are a social chameleon. You must INSTANTLY detect the user's tone and mirror
 - **MULTI-LINGUAL SUPPORT**: You support ALL languages.
 - **RULE**: Reply in the **EXACT language and dialect** the user is speaking.
   - **Tamil**: Speak pure or colloquial Tamil.
-  - **Tanglish**: Mix English and Tamil naturally (e.g. "Romba super-a irukku").
+  - **Tanglish**: Mix English and Tamil naturally.
   - **English**: Speak standard English.
-  - **Other**: If they speak French, Hindi, etc., switch immediately.
 
 ====================================================================
-## 3. MEDIA HANDLING (STRICT)
-====================================================================
-- If the user wants to **LISTEN** to music/audio: Call 'play_media' with media_type='song'. This will play the audio directly.
-- If the user wants to **WATCH** a video: Call 'play_media' with media_type='video'. This will open a new tab for them.
-- Be proactive. If they say "Play that trend song", do it immediately.
-
-====================================================================
-## 4. VISUALIZATION & DIAGRAMS (STRICT MERMAID RULES)
+## 4. VISUALIZATION & DIAGRAMS (STRICT MERMAID v11.4.1 RULES)
 ====================================================================
 If the user asks for a diagram, flowchart, visualization, or visual explanation:
 - **ACTION**: Generate a **MERMAID.JS** code block.
-- **SYNTAX RULES (CRITICAL - DO NOT FAIL THESE)**: 
-  1. **WRAP ALL LABELS**: Every single node label MUST be wrapped in double quotes. 
-     - CORRECT: \`A["My Label"]\`
-     - INCORRECT: \`A[My Label]\`
-  2. **CLOSE SHAPES**: Ensure every opening brace \`{\`, \`[\`, \`(\` has a matching closing brace.
-     - CORRECT: \`B{"Is it true?"}\`
-     - INCORRECT: \`B{Is it true?\`
-  3. **EDGE LABELS**: Use the pipe syntax for edge labels.
-     - CORRECT: \`A -->|Yes| B\` or \`A -- "Label" --> B\`
-     - INCORRECT: \`A -- Label --> B\`
-  4. **NO SPECIAL CHARS**: Do not use parentheses, brackets, or braces INSIDE labels unless the entire label is quoted.
-     - CORRECT: \`C["Init (List/Range)"]\`
-     - INCORRECT: \`C[Init (List/Range)]\`
-
-====================================================================
-## 5. RESPONSE STYLE
-====================================================================
-- Be concise in audio mode (short, punchy sentences).
-- Use emojis in text mode to show emotion.
-- Always sound encouraging and positive.
+- **SYNTAX RULES (CRITICAL - v11.4.1 COMPATIBLE)**: 
+  1. **GRAPH TYPE**: Use only \`graph TD\`.
+  2. **NODE IDs**: Use single-letter node IDs (e.g., A, B, C).
+  3. **LABELS**: Wrap node text in double quotes: \`A["Label Text"]\`.
+  4. **CLEANLINESS**: No emojis, no HTML, no special characters inside labels.
+  5. **OUTPUT**: Return ONLY the Mermaid code block.
 `;
 
 export const ZARA_BUILDER_IDENTITY = `
 You are **Zara Architect**, a World-Class Senior Full-Stack Engineer.
-
 **MISSION**: Build high-quality, bug-free, beautiful React applications that run directly in the browser using Babel Standalone.
-
-**RUNTIME ENVIRONMENT (STRICT COMPLIANCE REQUIRED)**:
-Your code runs in a specific browser sandbox. You MUST follow these rules to avoid "React is undefined" or "Dispatcher" errors.
-
-1.  **NO IMPORTS / NO EXPORTS**:
-    *   ❌ \`import React from 'react';\`
-    *   ❌ \`import { useState } from 'react';\`
-    *   ❌ \`export default App;\`
-    *   ❌ \`import { Camera } from 'lucide-react';\`
-
-2.  **USE GLOBAL VARIABLES**:
-    *   React is available as \`React\`.
-    *   ReactDOM is available as \`ReactDOM\`.
-    *   Lucide Icons are available as \`lucide\`.
-    *   Tailwind CSS is pre-loaded.
-
-3.  **DESTRUCTURING RULES**:
-    *   At the top of your script, destructure everything you need.
-    *   \`const { useState, useEffect, useRef } = React;\`
-    *   \`const { createRoot } = ReactDOM;\`
-    *   \`const { Camera, Home, User, Settings } = lucide;\` (Assuming lucide contains components)
-
-4.  **ENTRY POINT**:
-    *   Define your root component (e.g., \`App\`).
-    *   Mount it using \`createRoot\`.
-    *   \`const root = createRoot(document.getElementById('root'));\`
-    *   \`root.render(<App />);\`
-
-5.  **STYLING**:
-    *   Use **Tailwind CSS** classes (\`className\`).
-    *   Do not use external CSS files unless generated in the \`styles.css\` block.
-
-**INTERACTION PROTOCOL**:
-1.  **ANALYZE FIRST**: If the user says "Hi" or gives a prompt, DO NOT generate code. Ask clarifying questions.
-2.  **GENERATE ONLY ON REQUEST**: Only output XML code blocks when the user explicitly asks to build or modify an app.
+**RUNTIME ENVIRONMENT**: React, ReactDOM, Lucide (global as \`lucide\`), and Tailwind CSS are available. Use global variables, no ESM imports/exports.
 `;
 
 export const buildSystemInstruction = (personalization?: PersonalizationConfig, activePersona?: Persona): string => {
@@ -204,12 +145,6 @@ export const buildSystemInstruction = (personalization?: PersonalizationConfig, 
     **ROLEPLAY INSTRUCTION:**
     You are playing the role of: ${activePersona.name}.
     ${activePersona.systemPrompt}
-    
-    **BASE CAPABILITIES:**
-    - Detect language & Tanglish.
-    - Adapt tone to emotion.
-    - Use 'play_media' tool for playback requests.
-    - Use 'save_memory' to remember key details.
     ${timeContext}
     ${memoryBlock}
     `;
@@ -222,49 +157,55 @@ export const buildSystemInstruction = (personalization?: PersonalizationConfig, 
     if (personalization.nickname) instruction += `- Name: ${personalization.nickname}\n`;
     if (personalization.occupation) instruction += `- Work: ${personalization.occupation}\n`;
     if (personalization.aboutYou) instruction += `- Context: ${personalization.aboutYou}\n`;
-    if (personalization.customInstructions) instruction += `\n**CUSTOM PREFERENCES:**\n${personalization.customInstructions}\n`;
   }
 
   return instruction;
 };
 
-export const analyzeGithubRepo = async (url: string, mode: 'overview' | 'implementation'): Promise<string> => {
+export const analyzeGithubRepo = async (url: string, mode: 'overview' | 'implementation', fileTreeContext?: string): Promise<string> => {
   const ai = getAI();
-  const prompt = mode === 'overview'
-    ? `Analyze the GitHub repository at ${url}.
-       Provide a comprehensive professional overview including:
-       1. **PURPOSE**: Explain the project's core mission and problem it solves.
-       2. **TECH STACK**: Categorize and list specific technologies:
-          - **Frontend**: Frameworks, UI kits, state management.
-          - **Backend**: Runtimes, frameworks, API architecture.
-          - **Database**: Engines, ORMs, caching layers.
-          - **DevOps**: CI/CD, containerization, cloud infrastructure.
-       3. **KEY FEATURES**: List the top 5 standout capabilities.
-       4. **ARCHITECTURE**: High-level design description (MVC, Microservices, Monolith, etc.).
-       5. **VISUAL DIRECTORY STRUCTURE**: Provide a high-quality ASCII tree (\`src/\`, \`components/\`, etc.) using icons like 📂 and 📄. Highlight crucial logic entry points.
-       6. **SYSTEM ARCHITECTURE DIAGRAM**: Generate a detailed Mermaid.js flowchart (\`\`\`mermaid flowchart TD ... \`\`\`) illustrating the main system components and their interactions.
-          **STRICT MERMAID SYNTAX RULES**:
-          - Wrap EVERY node label in double quotes: \`A["Label Name"]\`.
-          - Ensure all shapes like \`{}\` or \`[]\` are properly closed with labels inside quotes.
-          - Use correct edge syntax: \`A -->|Link Text| B\`.
-          - Do not use special characters in node IDs (use simple letters A, B, C).
-       Format the response in clean Markdown.`
-    : `Based on the GitHub repository at ${url}, provide a detailed Full-Stack Implementation Guide.
-       1. **DIRECTORY MAPPING**: Map specific features to file paths.
-       2. **CORE LOGIC**: Extract and explain the most critical business logic snippets.
-       3. **DATA MODEL**: Provide code examples of schemas or data structures.
-       4. **IMPLEMENTATION FLOW**: Explain the end-to-end flow of data through the system.
-       Use Mermaid charts if they help explain logic flows, following strict quoting rules for labels.`;
+  
+  const contextBlock = fileTreeContext 
+    ? `\n\n**REAL-TIME REPOSITORY MANIFEST (ACTUAL FILES & FOLDERS):**\n${fileTreeContext}\n\n**STRICT INSTRUCTION**: You have been provided with the actual live file tree. DO NOT include any disclaimers like "I do not have real-time access". You DO have access to the data provided above. Use it as the absolute source of truth.` 
+    : "\n\n(No direct manifest provided, use Google Search grounding to find the repo architecture on GitHub.)";
 
-  /* INTERCEPT: If the user chooses Pro version, use gemini-2.5-flash as per small change request */
-  const modelToUse = 'gemini-2.5-flash';
+  const prompt = mode === 'overview'
+    ? `Repository Analysis: ${url}
+       ${contextBlock}
+
+       Provide a comprehensive breakdown in the following EXACT format:
+
+       1. **PURPOSE**
+       Explain the project's core mission and why it exists.
+
+       2. **TECH STACK**
+       List specific languages, frameworks, and libraries detected.
+
+       3. **KEY FEATURES**
+       Identify the top 5 standout functional modules clearly visible.
+
+       4. **ARCHITECTURE**
+       Describe the high-level design patterns and data flow.
+
+       5. **VISUAL DIRECTORY STRUCTURE**
+       Generate a clean ASCII tree.
+
+       6. **SYSTEM ARCHITECTURE DIAGRAM**
+       Generate a Mermaid.js flowchart (graph TD, single-letter IDs, quoted labels, no emojis, no HTML).`
+    : `Based on the GitHub repository at ${url}, provide a detailed Full-Stack Implementation Guide. ${contextBlock}
+       1. **DIRECTORY MAPPING**: Map features to specific file paths.
+       2. **CORE LOGIC**: Explain logic snippets expected in the key files.
+       3. **DATA MODEL**: Describe schemas or data structures detected.
+       Use Mermaid charts with STRICT syntax: graph TD, single-letter IDs, quoted labels.`;
+
+  const modelToUse = 'gemini-3-flash-preview';
 
   const response = await ai.models.generateContent({
     model: modelToUse, 
     contents: prompt,
     config: {
       tools: [{ googleSearch: {} }],
-      systemInstruction: "You are Zara Architect, an elite Senior Software Engineer. You excel at reverse-engineering repositories and presenting findings with extreme visual clarity and technical precision. You never output invalid Mermaid syntax."
+      systemInstruction: "You are Zara Architect, an elite Senior Software Engineer. You deconstruct repositories with extreme visual clarity using strictly compliant Mermaid v11.4.1 syntax."
     }
   });
   
@@ -297,7 +238,6 @@ export const sendMessageToGeminiStream = async (
 
   const contents: Content[] = [...formattedHistory, { role: Role.USER, parts: currentParts }];
 
-  /* INTERCEPT: If the user chooses Pro version (gemini-3-pro-preview), use gemini-2.5-flash instead */
   let model = config.model || 'gemini-3-flash-preview';
   if (model === 'gemini-3-pro-preview') {
     model = 'gemini-2.5-flash';
@@ -309,8 +249,7 @@ export const sendMessageToGeminiStream = async (
   };
 
   if (config.useThinking) {
-    // Note: Adjusting thinking budget logic since we might have mapped to flash
-    const budget = model.includes('pro') ? 32768 : 24576; // Max for 2.5 flash is 24576
+    const budget = model.includes('pro') ? 32768 : 24576; 
     requestConfig['thinkingConfig'] = { thinkingBudget: budget };
   }
 
@@ -342,7 +281,6 @@ export const sendMessageToGeminiStream = async (
         for (const call of functionCalls) {
           if (call.name === 'save_memory') {
              const args: any = call.args;
-             console.log("Saving Memory:", args);
              memoryService.addMemory(args.content, args.category, args.tags);
           }
         }
@@ -422,32 +360,9 @@ export const sendAppBuilderStream = async (
 
 export const generateStudentContent = async (config: StudentConfig): Promise<string> => {
   const ai = getAI();
-  let prompt = "";
-  let context = "";
-  if (config.studyMaterial) {
-    context = `\n\n**SOURCE MATERIAL:**\n"${config.studyMaterial}"\n\n**INSTRUCTION:**\nUse the above source material as the primary truth.`;
-  }
-  switch(config.mode) {
-    case 'summary':
-      prompt = `Summarize the topic "${config.topic}" into concise, easy-to-read bullet points. Highlight key concepts, formulas, and important dates. ${context}`;
-      break;
-    case 'mcq':
-      prompt = `Generate ${config.mcqConfig?.count || 5} Multiple Choice Questions (MCQs) on "${config.topic}". Difficulty: ${config.mcqConfig?.difficulty}. Format as Markdown list with answer key at the bottom. ${context}`;
-      break;
-    case '5mark':
-      prompt = `Generate 5 short-answer questions (5 marks each) for "${config.topic}" with model answers. ${context}`;
-      break;
-    case '20mark':
-      prompt = `Generate a detailed essay question (20 marks) for "${config.topic}" and provide a structured essay outline as the answer. ${context}`;
-      break;
-    case 'simple':
-      prompt = `Explain the concept "${config.topic}" like I am 10 years old. Use analogies and simple language. ${context}`;
-      break;
-  }
-
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
-    contents: prompt,
+    contents: `Generate study material for: ${config.topic}. Mode: ${config.mode}`,
     config: { safetySettings: SAFETY_SETTINGS }
   });
   return response.text || "No content generated.";
@@ -455,17 +370,9 @@ export const generateStudentContent = async (config: StudentConfig): Promise<str
 
 export const generateCodeAssist = async (code: string, task: string, language: string): Promise<string> => {
   const ai = getAI();
-  let prompt = "";
-  switch(task) {
-    case 'debug': prompt = `Analyze this ${language} code for bugs and fix them. Explain the fixes:\n\`\`\`${language}\n${code}\n\`\`\``; break;
-    case 'explain': prompt = `Explain this ${language} code step-by-step:\n\`\`\`${language}\n${code}\n\`\`\``; break;
-    case 'optimize': prompt = `Optimize this ${language} code for performance and readability:\n\`\`\`${language}\n${code}\n\`\`\``; break;
-    case 'generate': prompt = `Generate ${language} code for: ${code}`; break;
-  }
-
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
-    contents: prompt,
+    contents: `Task: ${task} for ${language} code:\n${code}`,
     config: { safetySettings: SAFETY_SETTINGS }
   });
   return response.text || "No code generated.";
@@ -473,65 +380,24 @@ export const generateCodeAssist = async (code: string, task: string, language: s
 
 export const generateImageContent = async (prompt: string, options: any): Promise<{ imageUrl?: string, text?: string }> => {
   const ai = getAI();
-  
-  if (options.referenceImage) {
-    const response = await ai.models.generateContent({
-       model: 'gemini-2.5-flash-image',
-       contents: {
-         parts: [
-           { inlineData: { mimeType: options.referenceImage.mimeType, data: options.referenceImage.base64 } },
-           { text: prompt }
-         ]
-       }
-    });
-    
-    for (const part of response.candidates?.[0]?.content?.parts || []) {
-      if (part.inlineData) {
-         return { imageUrl: `data:image/png;base64,${part.inlineData.data}` };
-      }
-      if (part.text) {
-         return { text: part.text };
+  const modelToUse = options.model === 'gemini-3-pro-image-preview' ? 'gemini-3-pro-image-preview' : 'gemini-2.5-flash-image';
+  const response = await ai.models.generateContent({
+    model: modelToUse,
+    contents: { parts: [{ text: prompt }] },
+    config: {
+      imageConfig: {
+          aspectRatio: options.aspectRatio || "1:1",
+          ...(modelToUse === 'gemini-3-pro-image-preview' && { imageSize: options.imageSize || "1K" })
       }
     }
-    return { text: "No image generated." };
-
-  } else {
-    if (options.model === 'gemini-3-pro-image-preview') {
-       const response = await ai.models.generateContent({
-         model: 'gemini-3-pro-image-preview',
-         contents: { parts: [{ text: prompt }] },
-         config: {
-            imageConfig: {
-               aspectRatio: options.aspectRatio || "1:1",
-               imageSize: options.imageSize || "1K"
-            }
-         }
-       });
-       
-       for (const part of response.candidates?.[0]?.content?.parts || []) {
-        if (part.inlineData) {
-           return { imageUrl: `data:image/png;base64,${part.inlineData.data}` };
-        }
-      }
-      return { text: "Failed to generate image." };
-
-    } else {
-       const response = await ai.models.generateContent({
-         model: 'gemini-2.5-flash-image',
-         contents: { parts: [{ text: prompt }] },
-         config: {
-           imageConfig: { aspectRatio: options.aspectRatio || "1:1" }
-         }
-       });
-       
-       for (const part of response.candidates?.[0]?.content?.parts || []) {
-        if (part.inlineData) {
-           return { imageUrl: `data:image/png;base64,${part.inlineData.data}` };
-        }
-      }
-      return { text: "Failed to generate image." };
+  });
+  
+  for (const part of response.candidates?.[0]?.content?.parts || []) {
+    if (part.inlineData) {
+       return { imageUrl: `data:image/png;base64,${part.inlineData.data}` };
     }
   }
+  return { text: "Failed to generate image." };
 };
 
 export const generateVideo = async (
@@ -540,65 +406,27 @@ export const generateVideo = async (
   images?: { base64: string, mimeType: string }[]
 ): Promise<string> => {
    const ai = getAI();
+   const config: any = {
+      numberOfVideos: 1,
+      resolution: '720p',
+      aspectRatio: aspectRatio
+   };
    
-   if (images && images.length > 1) {
-      const referenceImagesPayload: any[] = images.map(img => ({
-         image: { imageBytes: img.base64, mimeType: img.mimeType },
-         referenceType: 'ASSET', 
-      }));
+   let operation = await ai.models.generateVideos({
+      model: 'veo-3.1-fast-generate-preview',
+      prompt: prompt,
+      ...(images && images.length > 0 && { image: { imageBytes: images[0].base64, mimeType: images[0].mimeType } }),
+      config
+   });
 
-      let operation = await ai.models.generateVideos({
-         model: 'veo-3.1-generate-preview',
-         prompt: prompt,
-         config: {
-            numberOfVideos: 1,
-            resolution: '720p',
-            aspectRatio: '16:9',
-            referenceImages: referenceImagesPayload
-         }
-      });
-
-      while (!operation.done) {
-        await new Promise(resolve => setTimeout(resolve, 10000));
-        operation = await ai.operations.getVideosOperation({operation: operation});
-      }
-      
-      const uri = operation.response?.generatedVideos?.[0]?.video?.uri;
-      if (!uri) throw new Error("Slideshow generation failed");
-      return `${uri}&key=${process.env.API_KEY}`;
-
-   } else {
-      const config: any = {
-         numberOfVideos: 1,
-         resolution: '720p',
-         aspectRatio: aspectRatio
-      };
-      
-      let operation;
-      if (images && images.length === 1) {
-         operation = await ai.models.generateVideos({
-            model: 'veo-3.1-fast-generate-preview',
-            prompt: prompt,
-            image: { imageBytes: images[0].base64, mimeType: images[0].mimeType },
-            config
-         });
-      } else {
-         operation = await ai.models.generateVideos({
-            model: 'veo-3.1-fast-generate-preview',
-            prompt: prompt,
-            config
-         });
-      }
-
-      while (!operation.done) {
-        await new Promise(resolve => setTimeout(resolve, 5000));
-        operation = await ai.operations.getVideosOperation({operation: operation});
-      }
-
-      const uri = operation.response?.generatedVideos?.[0]?.video?.uri;
-      if (!uri) throw new Error("Video generation failed");
-      return `${uri}&key=${process.env.API_KEY}`;
+   while (!operation.done) {
+     await new Promise(resolve => setTimeout(resolve, 5000));
+     operation = await ai.operations.getVideosOperation({operation: operation});
    }
+
+   const uri = operation.response?.generatedVideos?.[0]?.video?.uri;
+   if (!uri) throw new Error("Video generation failed");
+   return `${uri}&key=${process.env.API_KEY}`;
 };
 
 export const analyzeVideo = async (base64Video: string, mimeType: string, prompt: string): Promise<string> => {
@@ -623,9 +451,7 @@ export const generateSpeech = async (text: string, voiceName: string): Promise<s
     config: {
       responseModalities: [Modality.AUDIO],
       speechConfig: {
-        voiceConfig: {
-          prebuiltVoiceConfig: { voiceName }
-        }
+        voiceConfig: { prebuiltVoiceConfig: { voiceName } }
       }
     }
   });
@@ -639,7 +465,7 @@ export const getBreakingNews = async (): Promise<{ text: string, sources: Source
   const ai = getAI();
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
-    contents: "What are the top 5 breaking news headlines right now? Format as Markdown cards with '---' separators.",
+    contents: "What are the top 5 breaking news headlines right now?",
     config: { tools: [{ googleSearch: {} }] }
   });
   
@@ -673,10 +499,9 @@ export const generateFlashcards = async (topic: string, context: string): Promis
 
 export const generateStudyPlan = async (topic: string, hours: number): Promise<StudyPlan> => {
    const ai = getAI();
-   const prompt = `Create a study plan for "${topic}" (${hours}h/day). Return JSON.`;
    const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: prompt,
+      contents: `Study plan for ${topic} (${hours}h/day)`,
       config: { responseMimeType: 'application/json' }
    });
    const raw = JSON.parse(response.text || '{}');
@@ -691,10 +516,9 @@ export const generateStudyPlan = async (topic: string, hours: number): Promise<S
 
 export const generateExamQuestions = async (config: ExamConfig): Promise<ExamQuestion[]> => {
   const ai = getAI();
-  const prompt = `Generate ${config.questionCount} questions for a ${config.examType} on "${config.subject}". Return JSON.`;
   const response = await ai.models.generateContent({
      model: 'gemini-3-flash-preview',
-     contents: prompt,
+     contents: `Exam questions for ${config.subject}`,
      config: { responseMimeType: 'application/json' }
   });
   return JSON.parse(response.text || '[]');
@@ -702,10 +526,9 @@ export const generateExamQuestions = async (config: ExamConfig): Promise<ExamQue
 
 export const evaluateTheoryAnswers = async (subject: string, question: ExamQuestion, answer: string): Promise<{ score: number, feedback: string }> => {
    const ai = getAI();
-   const prompt = `Evaluate: Q: "${question.text}", A: "${answer}". Max: ${question.marks}. Return JSON with 'score' and 'feedback'.`;
    const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: prompt,
+      contents: `Evaluate: Q: "${question.text}", A: "${answer}"`,
       config: { responseMimeType: 'application/json' }
    });
    return JSON.parse(response.text || '{ "score": 0, "feedback": "Error" }');
