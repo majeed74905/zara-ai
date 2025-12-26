@@ -1,4 +1,3 @@
-
 import { ThemeName } from '../theme/types';
 import { ViewMode } from '../types';
 
@@ -6,12 +5,11 @@ export const APP_VERSION = "Zara AI v3.0 Pro";
 
 export const MODE_THEME_MAPPING: Partial<Record<ViewMode, ThemeName>> = {
   live: 'aurora',
-  code: 'midnight', // or solarizedDark
+  code: 'midnight',
   student: 'pastel',
-  exam: 'light', // cleaner for reading
-  voice: 'glass',
+  exam: 'light',
   workspace: 'royal',
-  chat: 'dark', // default
+  chat: 'dark',
   planner: 'light',
   analytics: 'midnight',
   dashboard: 'light',

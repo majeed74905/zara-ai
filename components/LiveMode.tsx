@@ -1,8 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Mic, MicOff, Radio, AlertTriangle, User, Sparkles, Activity, WifiOff, X, Music, Youtube, RefreshCw, ExternalLink, Loader2 } from 'lucide-react';
-/* Import Modality from @google/genai as per guidelines */
-import { GoogleGenAI, Modality } from "@google/genai";
+import { GoogleGenAI, Modality, LiveServerMessage } from "@google/genai";
 import { buildSystemInstruction, MEDIA_PLAYER_TOOL } from '../services/gemini';
 import { float32ToInt16, base64ToUint8Array, decodeAudioData, arrayBufferToBase64 } from '../utils/audioUtils';
 import { PersonalizationConfig, MediaAction } from '../types';
@@ -162,12 +161,6 @@ export const LiveMode: React.FC<LiveModeProps> = ({ personalization }) => {
         return;
     }
 
-    const apiKey = process.env.API_KEY;
-    if (!apiKey) {
-        setError("API Key missing.");
-        return;
-    }
-    
     setError(null);
     setIsActive(true); 
     isActiveRef.current = true;
@@ -181,34 +174,34 @@ export const LiveMode: React.FC<LiveModeProps> = ({ personalization }) => {
 
       const outputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
       audioContextRef.current = outputCtx;
+      
+      // Critical: AudioContext must be resumed from user gesture (already in toggleConnection)
+      if (outputCtx.state === 'suspended') await outputCtx.resume();
+      if (inputCtx.state === 'suspended') await inputCtx.resume();
+
       nextStartTimeRef.current = outputCtx.currentTime;
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaStreamRef.current = stream;
 
-      // 2. Real-time IST Date/Time Calculation
       const indiaTime = new Date().toLocaleString('en-IN', { 
         timeZone: 'Asia/Kolkata', 
         dateStyle: 'full', 
         timeStyle: 'long' 
       });
       
-      const ai = new GoogleGenAI({ apiKey });
+      // Always instantiate directly with process.env.API_KEY
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       setStatus('Connecting...');
       
-      // 3. Initiate Connection with STRICT configuration
       const sessionPromise = ai.live.connect({
         model: 'gemini-2.5-flash-native-audio-preview-09-2025',
         callbacks: {
           onopen: () => {
-            if (isActiveRef.current && isMountedRef.current) {
-                setStatus('Online');
-            }
+            if (isMountedRef.current) setStatus('Online');
           },
-          onmessage: async (message: any) => {
-             if (!isActiveRef.current) return;
-
-             // Handle Tool Calls (Media Player)
+          onmessage: async (message: LiveServerMessage) => {
+             // Handle Tool Calls
              if (message.toolCall) {
                 for (const call of message.toolCall.functionCalls) {
                    if (call.name === 'play_media') {
@@ -217,12 +210,9 @@ export const LiveMode: React.FC<LiveModeProps> = ({ personalization }) => {
                           ? `https://open.spotify.com/search/${encodeURIComponent(args.query)}`
                           : `https://www.youtube.com/results?search_query=${encodeURIComponent(args.query)}`;
 
-                       if (isMountedRef.current) {
-                          setMediaCard({ ...args, action: 'PLAY_MEDIA', url });
-                       }
+                       if (isMountedRef.current) setMediaCard({ ...args, action: 'PLAY_MEDIA', url });
 
                        sessionPromise.then(session => {
-                          /* Fix: session.sendToolResponse expects functionResponses as an object according to guidelines */
                           session.sendToolResponse({
                               functionResponses: {
                                   id: call.id,
@@ -276,23 +266,22 @@ export const LiveMode: React.FC<LiveModeProps> = ({ personalization }) => {
                 if (isMountedRef.current) setIsAiSpeaking(false);
              }
           },
-          onclose: () => {
+          onerror: (e: ErrorEvent) => {
+             console.error("Live API Session Error:", e);
+             if (isMountedRef.current) {
+                setError(`Connection Error: ${e.message || 'Network error'}`);
+                setStatus("Failed");
+             }
+             cleanup();
+          },
+          onclose: (e: CloseEvent) => {
             if (!isUserStoppingRef.current) {
                 if (isMountedRef.current) setStatus("Disconnected");
                 cleanup();
             }
-          },
-          onerror: (err: any) => {
-             console.error("Live API Session Error:", err);
-             if (isMountedRef.current) {
-                setError(`Connection Error: ${err.message || 'Network error'}`);
-                setStatus("Failed");
-             }
-             cleanup();
           }
         },
         config: {
-            /* Fix Modality type error: use enum value instead of string literal 'AUDIO' */
             responseModalities: [Modality.AUDIO],
             tools: [{ functionDeclarations: [MEDIA_PLAYER_TOOL] }],
             speechConfig: {
@@ -305,7 +294,7 @@ export const LiveMode: React.FC<LiveModeProps> = ({ personalization }) => {
               1. **CURRENT TIME**: Today is ${indiaTime}.
               2. **LOCATION**: User is in India.
               3. **ACCURACY**: If the user asks for the date, day, or time, use the above information exactly.
-              4. **IDENTITY**: You are Zara, an advanced AI companion. Maintain perfect native fluency in detected languages (English/Tamil/Tanglish).`
+              4. **IDENTITY**: You are Zara, an advanced AI companion. Maintain fluent native-like conversation.`
         }
       });
 
@@ -319,11 +308,10 @@ export const LiveMode: React.FC<LiveModeProps> = ({ personalization }) => {
       processor.connect(inputCtx.destination); 
 
       processor.onaudioprocess = (e) => {
-         if (!isActiveRef.current) return;
-         
+         // Guideline: Solely rely on sessionPromise resolves, do not add other condition checks.
          let inputData = e.inputBuffer.getChannelData(0);
          
-         // Visualizer Volume
+         // Non-SDK logic: Visualizer Volume
          if (isMountedRef.current) {
             let sum = 0;
             for (let i=0; i<inputData.length; i+=16) sum += inputData[i] * inputData[i];
@@ -336,7 +324,6 @@ export const LiveMode: React.FC<LiveModeProps> = ({ personalization }) => {
          const pcmData = float32ToInt16(inputData);
          const pcmBase64 = arrayBufferToBase64(pcmData.buffer);
          
-         /* Fix: Initiation of sendRealtimeInput after connect call resolves using sessionPromise.then() */
          sessionPromise.then(session => {
             try {
                 session.sendRealtimeInput({

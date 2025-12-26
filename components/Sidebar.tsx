@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { MessageSquare, GraduationCap, Code2, Layout, Settings, Sparkles, Mic, Radio, Plus, Trash2, MessageCircle, Sun, Moon, Edit2, Check, X, Image as ImageIcon, ClipboardCheck, BarChart3, Calendar, PenTool, Info, Hammer, Heart, Brain, Zap, FolderOpen, Lightbulb, RotateCw, Github } from 'lucide-react';
+import { MessageSquare, GraduationCap, Code2, Layout, Settings, Sparkles, Radio, Plus, Trash2, MessageCircle, Sun, Moon, Edit2, Check, X, Image as ImageIcon, ClipboardCheck, BarChart3, Calendar, PenTool, Info, Hammer, Heart, Brain, Zap, FolderOpen, Lightbulb, RotateCw, Github } from 'lucide-react';
 import { ViewMode, ChatSession } from '../types';
 import { useTheme } from '../theme/ThemeContext';
 
@@ -9,7 +8,6 @@ interface SidebarProps {
   onViewChange: (view: ViewMode) => void;
   isOpen: boolean;
   onClose: () => void;
-  // History Props
   sessions: ChatSession[];
   activeSessionId: string | null;
   onNewChat: () => void;
@@ -63,8 +61,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const { currentThemeName, setTheme } = useTheme();
 
   const toggleSimpleTheme = () => {
-    // Simple toggle logic for the sidebar button:
-    // If it's light (or glass/pastel), go dark. Otherwise go light.
     const isLightAligned = ['light', 'glass', 'pastel'].includes(currentThemeName);
     setTheme(isLightAligned ? 'dark' : 'light');
   };
@@ -112,7 +108,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         isOpen ? 'translate-x-0' : '-translate-x-full'
       } fixed md:relative z-30 w-[280px] h-full bg-gradient-to-b from-surface/95 via-surface/90 to-primary/10 backdrop-blur-xl border-r border-white/10 flex flex-col transition-transform duration-300 ease-in-out md:translate-x-0 overflow-hidden shadow-2xl md:shadow-none`}
     >
-      {/* Header */}
       <div className="p-6 pb-2 flex-shrink-0">
         <div className="flex items-center gap-2 mb-6">
            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/20">
@@ -124,7 +119,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
            </div>
         </div>
 
-        {/* New Chat Button */}
         <button 
           onClick={onNewChat}
           className="w-full bg-gradient-to-r from-primary to-accent text-white rounded-xl p-3 flex items-center justify-center gap-2 font-medium shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all mb-4 active:scale-95"
@@ -134,10 +128,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </button>
       </div>
 
-      {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto px-4 space-y-6 scrollbar-hide">
-        
-        {/* Navigation */}
         <div className="space-y-1">
           <p className="px-2 text-[10px] font-bold text-text-sub/40 uppercase tracking-widest mb-2">Core</p>
           <NavItem icon={MessageSquare} label="Chat" active={currentView === 'chat'} onClick={() => onViewChange('chat')} />
@@ -145,7 +136,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <p className="px-2 text-[10px] font-bold text-text-sub/40 uppercase tracking-widest mt-6 mb-2">Studio</p>
           <NavItem icon={Radio} label="Live" active={currentView === 'live'} onClick={() => onViewChange('live')} />
           <NavItem icon={ImageIcon} label="Image" active={currentView === 'workspace'} onClick={() => onViewChange('workspace')} />
-          <NavItem icon={Mic} label="Voice" active={currentView === 'voice'} onClick={() => onViewChange('voice')} />
 
           <p className="px-2 text-[10px] font-bold text-text-sub/40 uppercase tracking-widest mt-6 mb-2">Academic & Dev</p>
           <NavItem icon={GraduationCap} label="Tutor" active={currentView === 'student'} onClick={() => onViewChange('student')} />
@@ -155,7 +145,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <NavItem icon={Github} label="GitHub Analyzer" active={currentView === 'github'} onClick={() => onViewChange('github')} />
         </div>
 
-        {/* Chat History Section */}
         {sessions.length > 0 && (
           <div className="pt-2">
             <p className="px-2 text-[10px] font-bold text-text-sub/40 uppercase tracking-widest mb-2">Recent Chats</p>
@@ -199,8 +188,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <>
                       <MessageCircle className="w-4 h-4 flex-shrink-0" />
                       <span className="text-sm truncate pr-14">{session.title}</span>
-                      
-                      {/* Action Buttons */}
                       <div className={`absolute right-2 flex items-center bg-surfaceHighlight/90 backdrop-blur-md rounded-lg shadow-sm border border-white/5 transition-all duration-200 ${
                         activeSessionId === session.id 
                           ? 'opacity-100 translate-x-0' 
@@ -230,9 +217,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
       </div>
 
-      {/* Footer */}
       <div className="flex-shrink-0 p-4 border-t border-border space-y-2 bg-background/50 backdrop-blur">
-        
         <div className="grid grid-cols-2 gap-2">
             <button onClick={toggleSimpleTheme} className="flex items-center justify-center gap-2 px-3 py-3 rounded-xl transition-all text-text-sub hover:bg-surfaceHighlight/50">
                {['light', 'glass', 'pastel'].includes(currentThemeName) ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
@@ -241,15 +226,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <Settings className="w-5 h-5" />
             </button>
         </div>
-        
         <div className="flex items-center justify-between pt-1">
            <button onClick={onOpenFeedback} className="text-[10px] text-text-sub hover:text-primary w-full text-center">
               Send Feedback
            </button>
         </div>
       </div>
-      
-      {/* Mobile overlay backdrop */}
       {isOpen && (
         <div 
           className="fixed inset-0 bg-black/60 z-[-1] md:hidden backdrop-blur-sm"

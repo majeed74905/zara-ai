@@ -1,6 +1,5 @@
-
 import React, { useRef, useState, useEffect } from 'react';
-import { SendHorizontal, Paperclip, X, Image as ImageIcon, FileText, Loader2, Plus, Square, Info, Pencil, Sparkles, Mic, MicOff, WifiOff } from 'lucide-react';
+import { SendHorizontal, Paperclip, X, Image as ImageIcon, FileText, Loader2, Plus, Square, Info, Pencil, Sparkles, Mic, MicOff, WifiOff, Heart } from 'lucide-react';
 import { Attachment, Message, ViewMode } from '../types';
 import { validateFile, createAttachment } from '../utils/fileUtils';
 import { getTemplatesForView } from '../constants/templates';
@@ -13,7 +12,8 @@ interface InputAreaProps {
   isOffline?: boolean;
   editMessage: Message | null;
   onCancelEdit: () => void;
-  viewMode?: ViewMode; // Add viewMode prop to show context-aware templates
+  viewMode?: ViewMode;
+  isEmotionalMode?: boolean; // New prop
 }
 
 export const InputArea: React.FC<InputAreaProps> = ({ 
@@ -24,7 +24,8 @@ export const InputArea: React.FC<InputAreaProps> = ({
   isOffline = false,
   editMessage,
   onCancelEdit,
-  viewMode = 'chat'
+  viewMode = 'chat',
+  isEmotionalMode = false
 }) => {
   const [text, setText] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -206,66 +207,82 @@ export const InputArea: React.FC<InputAreaProps> = ({
       if (isOffline) return "Offline Mode: Search local notes and memory...";
       if (editMessage) return "Update your message...";
       if (isListening) return "Listening...";
+      
+      // Emotional Mode Custom Placeholder
+      if (isEmotionalMode) return "How are you feeling right now? I'm here to listen.";
+      
       return "Enter a prompt here";
   };
 
+  const borderColor = isEmotionalMode ? 'border-violet-500/30 shadow-[0_0_15px_rgba(139,92,246,0.1)]' : editMessage ? 'border-primary/30' : isOffline ? 'border-orange-500/30' : 'border-white/10';
+
   return (
-    <div className="w-full max-w-4xl mx-auto p-4 relative">
-      {/* Templates Row */}
-      {!editMessage && !isLoading && !disabled && !isOffline && (
-        <div className="flex gap-2 mb-3 overflow-x-auto pb-1 scrollbar-hide px-2">
+    <div className="w-full max-w-3xl mx-auto p-4 md:pb-6 relative">
+      {/* Templates Row (Scrolling Chips) */}
+      {!editMessage && !isLoading && !disabled && !isOffline && !isEmotionalMode && (
+        <div className="flex gap-2 mb-4 overflow-x-auto pb-1 scrollbar-hide px-2">
           {templates.map(tpl => (
              <button
                key={tpl.id}
                onClick={() => applyTemplate(tpl.prompt)}
-               className="flex items-center gap-1.5 px-3 py-1.5 bg-surface border border-border rounded-full text-xs text-text-sub hover:text-primary hover:border-primary/30 transition-all whitespace-nowrap shadow-sm"
+               className="flex items-center gap-1.5 px-4 py-2 bg-surfaceHighlight border border-white/10 rounded-xl text-xs text-text-sub hover:text-text hover:border-white/20 transition-all whitespace-nowrap shadow-sm group"
              >
-               <Sparkles className="w-3 h-3" />
+               <Sparkles className="w-3 h-3 text-text-sub group-hover:text-primary transition-colors" />
                {tpl.label}
              </button>
           ))}
         </div>
       )}
       
+      {/* Emotional Mode Indicator Banner */}
+      {isEmotionalMode && (
+         <div className="flex justify-center mb-4 animate-fade-in">
+            <span className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-violet-500/10 text-violet-400 text-xs font-bold tracking-wide border border-violet-500/20">
+               <Heart className="w-3 h-3 fill-current animate-pulse" /> Emotional Support Active
+            </span>
+         </div>
+      )}
+      
       {/* Edit Mode Banner */}
       {editMessage && (
-        <div className="mx-2 mb-2 bg-surfaceHighlight border border-border rounded-xl p-3 flex items-start gap-3 animate-fade-in">
-           <div className="bg-primary/10 p-1.5 rounded-full text-primary mt-0.5">
-             <Pencil className="w-3.5 h-3.5" />
+        <div className="mx-2 mb-3 bg-surfaceHighlight border border-border rounded-2xl p-4 flex items-start gap-3 animate-fade-in shadow-xl">
+           <div className="bg-primary/10 p-2 rounded-full text-primary mt-0.5">
+             <Pencil className="w-4 h-4" />
            </div>
            <div className="flex-1">
              <div className="flex justify-between items-start">
-                <span className="text-sm font-medium text-primary flex items-center gap-2">
+                <span className="text-sm font-bold text-primary flex items-center gap-2">
                    Editing message
                    <button 
                      onClick={onCancelEdit}
                      className="bg-surface border border-border rounded-full p-0.5 text-text-sub hover:text-text hover:bg-surfaceHighlight ml-2"
                    >
-                     <X className="w-3 h-3" />
+                     <X className="w-3.5 h-3.5" />
                    </button>
                 </span>
              </div>
              <p className="text-xs text-text-sub mt-1 flex items-center gap-1.5">
-               <Info className="w-3 h-3" />
-               Editing this message will restart the conversation from here.
+               <Info className="w-3.5 h-3.5 opacity-60" />
+               Changes will restart the conversation from this point.
              </p>
            </div>
         </div>
       )}
 
-      <div className={`relative bg-gradient-to-b from-surface/90 to-surface/50 backdrop-blur-md rounded-3xl border shadow-lg flex flex-col transition-all focus-within:border-primary/30 focus-within:shadow-xl focus-within:shadow-primary/5 ${editMessage ? 'border-primary/30' : isOffline ? 'border-orange-500/30' : 'border-white/10'}`}>
+      {/* Input Container */}
+      <div className={`relative bg-surface/50 backdrop-blur-xl rounded-[2rem] border transition-all focus-within:ring-2 ${isEmotionalMode ? 'focus-within:ring-violet-500/20' : 'focus-within:ring-primary/20'} shadow-2xl flex flex-col ${borderColor}`}>
         
         {attachments.length > 0 && (
-          <div className="flex gap-3 p-3 pl-4 overflow-x-auto">
+          <div className="flex gap-3 p-4 pb-2 overflow-x-auto">
             {attachments.map((att) => (
               <div key={att.id} className="relative group flex-shrink-0">
-                <div className="w-16 h-16 rounded-lg overflow-hidden border border-secondary/50 bg-background relative">
+                <div className="w-16 h-16 rounded-xl overflow-hidden border border-white/5 bg-background relative shadow-lg">
                    {att.mimeType.startsWith('image/') ? (
                      <img src={att.previewUrl} alt="preview" className="w-full h-full object-cover" />
                    ) : (
                      <div className="w-full h-full flex flex-col items-center justify-center">
                        <FileText className="w-6 h-6 text-text-sub" />
-                       <span className="text-[8px] text-text-sub truncate w-full text-center px-1">
+                       <span className="text-[8px] text-text-sub truncate w-full text-center px-1 font-bold">
                          {att.file.name.split('.').pop()?.toUpperCase()}
                        </span>
                      </div>
@@ -273,7 +290,7 @@ export const InputArea: React.FC<InputAreaProps> = ({
                 </div>
                 <button
                   onClick={() => removeAttachment(att.id)}
-                  className="absolute -top-1.5 -right-1.5 bg-secondary text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -282,25 +299,23 @@ export const InputArea: React.FC<InputAreaProps> = ({
           </div>
         )}
 
-        <div className="flex items-end gap-2 p-2 pl-4">
-          <div className="pb-2">
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className={`p-2 rounded-full transition-colors ${isOffline ? 'text-gray-600 cursor-not-allowed' : 'text-text-sub hover:text-text hover:bg-secondary/30'}`}
-              title={isOffline ? "Uploads unavailable offline" : "Add files"}
-              disabled={disabled || isLoading || isOffline}
-            >
-              <Plus className="w-5 h-5" />
-            </button>
-            <input
-              type="file"
-              multiple
-              ref={fileInputRef}
-              className="hidden"
-              onChange={handleFileSelect}
-              accept="image/*,application/pdf,text/*"
-            />
-          </div>
+        <div className="flex items-center gap-2 px-6 py-2">
+          {/* File Add Icon on left */}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className={`p-2 -ml-2 rounded-full transition-colors ${isOffline ? 'text-gray-600 cursor-not-allowed' : 'text-text-sub hover:text-text hover:bg-surfaceHighlight'}`}
+            disabled={disabled || isLoading || isOffline}
+          >
+            <Plus className="w-6 h-6" />
+          </button>
+          <input
+            type="file"
+            multiple
+            ref={fileInputRef}
+            className="hidden"
+            onChange={handleFileSelect}
+            accept="image/*,application/pdf,text/*"
+          />
 
           <textarea
             ref={textareaRef}
@@ -309,23 +324,24 @@ export const InputArea: React.FC<InputAreaProps> = ({
             onKeyDown={handleKeyDown}
             placeholder={getPlaceholder()}
             disabled={disabled}
-            className={`flex-1 bg-transparent text-text placeholder-text-sub/50 text-[16px] resize-none py-3 focus:outline-none max-h-[200px] overflow-y-auto transition-colors ${isListening ? 'placeholder-red-400/70' : ''}`}
+            className={`flex-1 bg-transparent text-text placeholder-text-sub/50 text-[16px] resize-none py-4 focus:outline-none max-h-[160px] overflow-y-auto transition-colors ${isListening ? 'placeholder-red-400/70' : ''}`}
             rows={1}
           />
 
-          <div className="pb-2 pr-1 flex items-center gap-1">
+          {/* Right Icons Container */}
+          <div className="flex items-center gap-1">
+            <div className="w-px h-6 bg-white/10 mx-2" />
             
             {/* Mic Button */}
             <button
                onClick={toggleListening}
                className={`p-2 rounded-full transition-all ${
                  isListening 
-                   ? 'bg-red-500/10 text-red-500 animate-pulse' 
+                   ? 'bg-red-500 text-white animate-pulse shadow-lg shadow-red-500/20' 
                    : isOffline
                      ? 'text-gray-600 cursor-not-allowed'
                      : 'text-text-sub hover:text-text hover:bg-surfaceHighlight'
                }`}
-               title={isOffline ? "Voice unavailable offline" : "Speech to Text"}
                disabled={disabled || isLoading || isOffline}
              >
                {isListening ? <MicOff className="w-5 h-5" /> : isOffline ? <WifiOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
@@ -334,10 +350,10 @@ export const InputArea: React.FC<InputAreaProps> = ({
             {isLoading ? (
               <button
                 onClick={onStop}
-                className="p-2 rounded-full bg-surfaceHighlight border border-border text-text hover:bg-surface/80 transition-all flex items-center justify-center group"
-                title="Stop generating"
+                className="p-2 rounded-full text-text hover:text-red-400 transition-colors"
+                title="Stop generation"
               >
-                <Square className="w-4 h-4 fill-current text-text group-hover:text-red-400 transition-colors" />
+                <Square className="w-5 h-5 fill-current" />
               </button>
             ) : (
               <button
@@ -345,19 +361,22 @@ export const InputArea: React.FC<InputAreaProps> = ({
                 disabled={(!text.trim() && attachments.length === 0) || disabled}
                 className={`p-2 rounded-full transition-all ${
                   (!text.trim() && attachments.length === 0) || disabled
-                    ? 'text-secondary cursor-not-allowed'
-                    : 'bg-text text-background hover:bg-white'
+                    ? 'text-text-sub/20 cursor-not-allowed'
+                    : isEmotionalMode 
+                       ? 'text-white bg-violet-500 hover:bg-violet-600 shadow-lg shadow-violet-500/30' 
+                       : 'text-text hover:scale-110 active:scale-95'
                 }`}
               >
-                <SendHorizontal className="w-5 h-5" />
+                <SendHorizontal className="w-6 h-6" />
               </button>
             )}
           </div>
         </div>
       </div>
       
-      <div className="text-center mt-2">
-         <p className="text-xs text-text-sub/50">
+      {/* Footer Disclaimer */}
+      <div className="text-center mt-4">
+         <p className="text-[11px] text-text-sub/40 leading-relaxed px-4">
            {isOffline 
              ? "Offline Mode: AI features limited to local memory search." 
              : "Zara AI may display inaccurate info, including about people, so double-check its responses."

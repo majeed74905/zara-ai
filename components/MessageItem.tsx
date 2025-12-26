@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Role, Message } from '../types';
@@ -101,7 +100,7 @@ const MermaidDiagram = ({ code }: { code: string }) => {
   };
 
   return (
-    <div className="my-4 overflow-hidden rounded-xl bg-white border border-gray-200 shadow-md">
+    <div className="my-4 overflow-hidden rounded-xl bg-white border border-gray-200 shadow-md animate-scale-in">
         <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-100">
             <div className="flex items-center gap-2">
                 <Workflow className="w-3.5 h-3.5 text-indigo-500" />
@@ -142,7 +141,7 @@ const CodeBlock = ({ inline, className, children, ...props }: any) => {
     }
 
     return (
-      <div className="relative group my-4 rounded-lg overflow-hidden border border-white/10 bg-[#1e1e1e]">
+      <div className="relative group my-4 rounded-lg overflow-hidden border border-white/10 bg-[#1e1e1e] animate-scale-in">
         <div className="flex items-center justify-between px-4 py-2 bg-[#2d2d2d] border-b border-white/5">
            <span className="text-xs text-gray-400 font-mono">{match[1]}</span>
            <button onClick={handleCopy} className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors">
@@ -236,11 +235,11 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, onEdit }) => 
   };
 
   return (
-    <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} mb-6 group`}>
+    <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} mb-6 group animate-slide-up`}>
       <div className={`flex max-w-[95%] md:max-w-[80%] gap-4 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
         
         {/* Avatar */}
-        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center border border-border ${isUser ? 'bg-surfaceHighlight' : message.isOffline ? 'bg-orange-500/10 border-orange-500/30' : 'bg-transparent'}`}>
+        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center border border-border ${isUser ? 'bg-surfaceHighlight' : message.isOffline ? 'bg-orange-500/10 border-orange-500/30' : 'bg-transparent'} transition-transform duration-300 hover:scale-110`}>
           {isUser ? (
             <User className="w-5 h-5 text-text" />
           ) : (
@@ -263,7 +262,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, onEdit }) => 
 
           {/* Attachments Display */}
           {message.attachments && message.attachments.length > 0 && (
-            <div className={`flex flex-wrap gap-2 mb-2 ${isUser ? 'justify-end' : 'justify-start'}`}>
+            <div className={`flex flex-wrap gap-2 mb-2 ${isUser ? 'justify-end' : 'justify-start'} animate-scale-in`}>
               {message.attachments.map((att) => (
                 <div 
                   key={att.id} 
@@ -272,7 +271,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, onEdit }) => 
                   }`}
                 >
                   {att.mimeType.startsWith('image/') ? (
-                    <img src={att.previewUrl} alt="attachment" className="h-32 w-auto object-cover" />
+                    <img src={att.previewUrl} alt="attachment" className="h-32 w-auto object-cover transition-transform hover:scale-105" />
                   ) : att.mimeType === 'application/pdf' ? (
                      <div className="flex flex-col w-full">
                         <div className="flex items-center justify-between p-2.5 border-b border-border bg-surfaceHighlight/50">
@@ -317,7 +316,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, onEdit }) => 
              {isUser && onEdit && (
                <button 
                  onClick={() => onEdit(message)}
-                 className="p-1.5 text-text-sub hover:text-text bg-surfaceHighlight hover:bg-surface border border-transparent hover:border-border rounded-full opacity-0 group-hover:opacity-100 transition-all"
+                 className="p-1.5 text-text-sub hover:text-text bg-surfaceHighlight hover:bg-surface border border-transparent hover:border-border rounded-full opacity-0 group-hover:opacity-100 transition-all transform hover:scale-110"
                  title="Edit message"
                >
                  <Pencil className="w-3.5 h-3.5" />
@@ -326,7 +325,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, onEdit }) => 
 
             {/* Text Content */}
             <div
-              className={`px-5 py-3.5 rounded-2xl text-[15px] leading-relaxed shadow-sm overflow-hidden ${
+              className={`px-5 py-3.5 rounded-2xl text-[15px] leading-relaxed shadow-sm overflow-hidden transition-all hover:shadow-md ${
                 isUser
                   ? 'bg-surfaceHighlight text-text rounded-tr-sm border border-white/5'
                   : message.isOffline
@@ -354,14 +353,14 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, onEdit }) => 
               )}
               
               {message.isError && (
-                 <p className="text-red-400 text-sm mt-2">Error sending message.</p>
+                 <p className="text-red-400 text-sm mt-2 animate-pulse">Error sending message.</p>
               )}
             </div>
           </div>
 
           {/* Sources / Grounding */}
           {!isUser && message.sources && message.sources.length > 0 && (
-            <div className="mt-2 ml-1 mb-2">
+            <div className="mt-2 ml-1 mb-2 animate-slide-up delay-100">
               <div className="flex flex-wrap gap-2">
                 {message.sources.map((source, idx) => (
                   <a 
@@ -369,7 +368,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, onEdit }) => 
                     href={source.uri}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 bg-surfaceHighlight border border-border hover:bg-surface hover:border-primary/50 text-text-sub hover:text-primary px-3 py-1.5 rounded-full text-xs transition-all max-w-[240px]"
+                    className="flex items-center gap-1.5 bg-surfaceHighlight border border-border hover:bg-surface hover:border-primary/50 text-text-sub hover:text-primary px-3 py-1.5 rounded-full text-xs transition-all max-w-[240px] hover:scale-105"
                     title={source.title}
                   >
                     <ExternalLink className="w-3 h-3 flex-shrink-0" />
@@ -384,7 +383,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, onEdit }) => 
           {!isUser && !message.isError && (
             <div className="mt-1 ml-1 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
               {isSpeaking ? (
-                <div className="flex items-center gap-2 bg-surfaceHighlight border border-border rounded-full px-2 py-1">
+                <div className="flex items-center gap-2 bg-surfaceHighlight border border-border rounded-full px-2 py-1 animate-fade-in">
                   <button 
                     onClick={handleStop}
                     className="p-1.5 rounded-full hover:bg-surface text-primary transition-colors"

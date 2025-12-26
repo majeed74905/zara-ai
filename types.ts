@@ -1,4 +1,3 @@
-
 export enum Role {
   USER = 'user',
   MODEL = 'model',
@@ -9,7 +8,6 @@ export type ViewMode =
   | 'student' 
   | 'code' 
   | 'live' 
-  | 'voice' 
   | 'workspace' 
   | 'settings' 
   | 'exam' 
@@ -62,7 +60,7 @@ export interface Message {
   isError?: boolean;
   isStreaming?: boolean;
   isPinned?: boolean;
-  isOffline?: boolean; // New flag for offline messages
+  isOffline?: boolean;
   mediaAction?: MediaAction;
 }
 
@@ -88,6 +86,7 @@ export interface StudentConfig {
     difficulty: 'Easy' | 'Medium' | 'Hard';
   };
   studyMaterial?: string;
+  attachments?: Attachment[];
 }
 
 export interface CodeConfig {
@@ -110,6 +109,7 @@ export interface ChatConfig {
   model: GeminiModel;
   useThinking: boolean;
   useGrounding: boolean;
+  isEmotionalMode: boolean; // New Feature: Emotional Support Mode
   activePersonaId?: string;
 }
 
@@ -142,7 +142,6 @@ export interface SavedPrompt {
   category: string;
 }
 
-// --- MEMORY ENGINE ---
 export type MemoryCategory = 'core' | 'preference' | 'project' | 'emotional' | 'fact';
 
 export interface MemoryNode {
@@ -154,7 +153,6 @@ export interface MemoryNode {
   timestamp: number;
 }
 
-// --- EXAM MODE TYPES ---
 export type ExamType = 'Quiz' | 'Unit Test' | 'Semester';
 export type ExamDifficulty = 'Easy' | 'Medium' | 'Hard' | 'Mixed';
 export type QuestionType = 'MCQ' | 'SHORT' | 'LONG';
@@ -198,7 +196,6 @@ export interface ExamSession {
   maxScore?: number;
 }
 
-// --- ANALYTICS ---
 export interface DailyStats {
   date: string;
   messagesSent: number;
@@ -206,7 +203,6 @@ export interface DailyStats {
   examsTaken: number;
 }
 
-// --- STUDY PLANNER ---
 export interface Task {
   id: string;
   description: string;
@@ -215,7 +211,7 @@ export interface Task {
 }
 
 export interface DayPlan {
-  day: string; // "Monday"
+  day: string;
   tasks: Task[];
 }
 
@@ -227,15 +223,13 @@ export interface StudyPlan {
   startDate: string;
 }
 
-// --- TOPIC MASTERY ---
 export interface TopicMastery {
   topic: string;
-  masteryLevel: number; // 0-100
+  masteryLevel: number;
   status: 'Novice' | 'Intermediate' | 'Expert';
   lastPracticed: number;
 }
 
-// --- FLASHCARDS ---
 export interface Flashcard {
   front: string;
   back: string;
@@ -249,7 +243,6 @@ export interface FlashcardSet {
   createdAt: number;
 }
 
-// --- NOTES ---
 export interface Note {
   id: string;
   title: string;
@@ -259,7 +252,6 @@ export interface Note {
   updatedAt: number;
 }
 
-// --- FEEDBACK ---
 export interface AppFeedback {
   id: string;
   rating: number;

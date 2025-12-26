@@ -1,10 +1,13 @@
-import { useState, useEffect } from 'react';
-import { fileToBase64 } from '../utils/fileUtils';
 
-const STORAGE_KEY_STUDY_MATERIAL = 'zara_study_material';
+import { useState, useEffect } from 'react';
+import { Attachment } from '../types';
+import { createAttachment, validateFile } from '../utils/fileUtils';
+
+const STORAGE_KEY_STUDY_MATERIAL = 'zara_study_material_text';
 
 export const useStudyMaterial = () => {
   const [studyMaterial, setStudyMaterial] = useState<string>('');
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY_STUDY_MATERIAL);
@@ -17,27 +20,37 @@ export const useStudyMaterial = () => {
   };
 
   const loadFromFile = async (file: File) => {
-    // Simple text handling. For PDF/Images, we might need OCR or Gemini Vision extraction
-    // Here we handle plain text files directly.
+    const error = validateFile(file);
+    if (error) throw new Error(error);
+
+    // If it's a text file, we can optionally extract it to the text box
     if (file.type === 'text/plain' || file.name.endsWith('.txt') || file.name.endsWith('.md')) {
       const text = await file.text();
       updateMaterial(text);
-    } else {
-       // For simplified usage in this specific hook, we throw if not text.
-       // In a full implementation, we'd send the file to Gemini to "extract text" first.
-       throw new Error("Currently only text files (.txt, .md) are supported for direct context loading. For PDFs, upload them as attachments in the main chat.");
+      return;
     }
+
+    // Otherwise, handle it as a multi-modal attachment
+    const attachment = await createAttachment(file);
+    setAttachments(prev => [...prev, attachment]);
+  };
+
+  const removeAttachment = (id: string) => {
+    setAttachments(prev => prev.filter(a => a.id !== id));
   };
 
   const clearMaterial = () => {
     setStudyMaterial('');
+    setAttachments([]);
     localStorage.removeItem(STORAGE_KEY_STUDY_MATERIAL);
   };
 
   return {
     studyMaterial,
+    attachments,
     updateMaterial,
     loadFromFile,
+    removeAttachment,
     clearMaterial
   };
 };
