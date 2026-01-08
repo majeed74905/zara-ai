@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { 
   Code, Play, Smartphone, Monitor, Globe, Download, Terminal, 
@@ -6,7 +7,6 @@ import {
   X, Check, Send, Sparkles, Files, MessageSquare, ExternalLink, Maximize2, FlaskConical, ShieldCheck, AlertCircle, ClipboardList,
   Loader2, Columns2, Zap
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { sendAppBuilderStream, generateAppReliabilityReport } from '../services/gemini';
 import { Message, Role, Attachment, GeneratedFile, VFS, AppProject } from '../types';
 import ReactMarkdown from 'react-markdown';
@@ -260,7 +260,6 @@ export const AppBuilderMode: React.FC = () => {
                 <p className="text-[10px] text-text-sub uppercase font-bold tracking-widest mb-4">Last modified: {new Date(p.updatedAt).toLocaleDateString()}</p>
                 <div className="flex gap-2"><span className="text-[10px] bg-studio-bg border border-studio-border px-2 py-0.5 rounded font-black text-text-sub inline-flex items-center gap-1"><FileCode className="w-3 h-3" /> {Object.keys(p.vfs).length} Files</span></div>
                 
-                {/* Red Trash Icon for deletion - Matches video flow */}
                 <button 
                   onClick={(e) => deleteProject(p.id, e)} 
                   className="absolute top-4 right-4 p-2.5 text-text-sub hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all border border-transparent hover:border-red-500/20"
@@ -381,26 +380,25 @@ export const AppBuilderMode: React.FC = () => {
           </div>
 
           <div className="flex-1 relative bg-black/20 overflow-hidden">
-             <AnimatePresence mode="wait">
                 {stageView === 'preview' ? (
-                   <motion.div key="preview" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full flex items-center justify-center p-8 bg-[#09090b]">
+                   <div className="h-full flex items-center justify-center p-8 bg-[#09090b]">
                       <PreviewComponent />
-                   </motion.div>
+                   </div>
                 ) : stageView === 'code' ? (
-                   <motion.div key="code" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full flex flex-col">
+                   <div className="h-full flex flex-col">
                       <EditorComponent />
-                   </motion.div>
+                   </div>
                 ) : stageView === 'split' ? (
-                   <motion.div key="split" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full flex divide-x divide-studio-border">
+                   <div className="h-full flex divide-x divide-studio-border">
                       <div className="flex-1 h-full overflow-hidden bg-studio-bg">
                          <EditorComponent />
                       </div>
                       <div className="flex-1 h-full overflow-hidden bg-black/40 flex items-center justify-center p-6">
                          <PreviewComponent />
                       </div>
-                   </motion.div>
+                   </div>
                 ) : (
-                   <motion.div key="test" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="h-full flex flex-col p-8 custom-scrollbar overflow-y-auto">
+                   <div className="h-full flex flex-col p-8 custom-scrollbar overflow-y-auto">
                       <div className="max-w-4xl mx-auto w-full space-y-6">
                          <div className="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/20 p-6 rounded-3xl">
                             <div className="flex items-center gap-4">
@@ -433,9 +431,8 @@ export const AppBuilderMode: React.FC = () => {
                             </div>
                          )}
                       </div>
-                   </motion.div>
+                   </div>
                 )}
-             </AnimatePresence>
           </div>
         </main>
       </div>
